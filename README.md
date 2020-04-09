@@ -1,5 +1,5 @@
 # Empress
-[![Build Status](https://travis-ci.org/biocore/empress.svg?branch=master)](https://travis-ci.org/biocore/empress) [![Code Coverage](https://codecov.io/gh/biocore/empress/branch/master/graph/badge.svg)](https://codecov.io/gh/biocore/empress)
+[![Build Status](https://travis-ci.com/biocore/empress.svg?branch=master)](https://travis-ci.com/biocore/empress) [![Code Coverage](https://codecov.io/gh/biocore/empress/branch/master/graph/badge.svg)](https://codecov.io/gh/biocore/empress)
 
 Empress is a fast and scalable phylogenetic tree viewer.
 
