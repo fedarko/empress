@@ -295,6 +295,29 @@ class Tree(TreeNode):
         # horizontal line is proportional to the node length in question).
         return "Rectangular", "r"
 
+    def rescale_circular(self, width, height):
+        """ Circular layout version of the rectangular layout.
+
+        Works analogously to the rectangular layout: starts at the root
+        (with available angle ranges [0, 2pi], and goes down through
+        the tree's nodes in a preorder(?) traversal, dividing the angles
+        as needed based on the number of leaves of a child node.
+
+        Parameters
+        ----------
+        width : float
+            width of the canvas
+        height : float
+            height of the canvas
+
+        References
+        ----------
+        https://github.com/qiime/Topiary-Explorer/blob/master/src/topiaryexplorer/TreeVis.java
+            Description above + the implementation of this algorithm
+            derived from the Polar/Radial layout algorithm code.
+        """
+        return "Circular", "c"
+
     def layout_unrooted(self, width, height):
         """ Find best scaling factor for fitting the tree in the figure.
         This method will find the best orientation and scaling possible to
