@@ -1,6 +1,7 @@
 import warnings
 from skbio import TreeNode
 import numpy as np
+from empress.tools import sort_children_by_tipcount
 
 
 class TreeFormatWarning(Warning):
@@ -125,6 +126,54 @@ class Tree(TreeNode):
 
         tree.update_geometry(use_lengths)
         return tree
+
+    def leafsorted_postorder(self, include_self=True):
+        """Like TreeNode.postorder(), but clades are sorted by leaf count.
+
+           This is designed to facilitate the "Leaf sorting" option iTOL has
+           for rectangular / circular / etc. layouts.
+
+        References
+        ----------
+        https://github.com/biocore/scikit-bio/blob/6ccba4076f1b96843fa2428804cc5a91bf4b76b8/skbio/tree/_tree.py#L1085
+            Source of TreeNode.postorder() that I adapted to create this
+            function.
+
+        https://itol.embl.de/help.cgi
+            iTOL documentation (note the "Leaf sorting" information).
+        """
+        child_index_stack = [0]
+        curr = self
+        curr_children = sort_children_by_tipcount(self)
+        curr_children_len = len(curr_children)
+        while 1:
+            curr_index = child_index_stack[-1]
+            # if there are children left, process them
+            if curr_index < curr_children_len:
+                curr_child = curr_children[curr_index]
+                # if the current child has children, go there
+                if curr_child.children:
+                    child_index_stack.append(0)
+                    curr = curr_child
+                    curr_children = sort_children_by_tipcount(curr)
+                    curr_children_len = len(curr_children)
+                    curr_index = 0
+                # otherwise, yield that child
+                else:
+                    yield curr_child
+                    child_index_stack[-1] += 1
+            # if there are no children left, return self, and move to
+            # self's parent
+            else:
+                if include_self or (curr is not self):
+                    yield curr
+                if curr is self:
+                    break
+                curr = curr.parent
+                curr_children = sort_children_by_tipcount(curr)
+                curr_children_len = len(curr_children)
+                child_index_stack.pop()
+                child_index_stack[-1] += 1
 
     def update_geometry(self, use_lengths, depth=None):
         """Calculate tree node attributes such as height and depth.
@@ -300,7 +349,7 @@ class Tree(TreeNode):
         max_width = 0
         max_height = 0
         prev_y = 0
-        for n in self.postorder():
+        for n in self.leafsorted_postorder():
             if n.is_tip():
                 n.yr = prev_y
                 prev_y += 1
@@ -398,7 +447,7 @@ class Tree(TreeNode):
         """
         anglepernode = (2 * np.pi) / self.leafcount
         prev_clangle = 0
-        for n in self.postorder():
+        for n in self.leafsorted_postorder():
             if n.is_tip():
                 n.clangle = prev_clangle
                 prev_clangle += anglepernode

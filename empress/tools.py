@@ -34,6 +34,45 @@ def fill_missing_node_names(tree):
             current_unlabeled_node += 1
 
 
+def sort_children_by_tipcount(tree, descending=True):
+    """ Sorts a given node's children by their numbers of tip descendants.
+
+        Ties are broken arbitrarily.
+
+    Parameters
+    ----------
+    tree : skbio.TreeNode or empress.Tree
+        Node in a tree.
+
+    descending : bool
+        If True, this will sort the children by tip counts in descending order
+        (so the first child in the list will have the most tips and the last
+        child in the list should have the least tips). This is consistent with
+        what iTOL does by default.
+
+        If False, this will sort the children by tip counts in ascending order
+        (the reverse of the above).
+
+        For a visual comparison of these approaches, see
+        https://github.com/biocore/empress/issues/170#issuecomment-643570577.
+
+    Returns
+    -------
+    list
+        tree.children, sorted by the number of tip descendants each of the
+        children has.
+
+    References
+    ----------
+    https://itol.embl.de/help.cgi
+    """
+    return sorted(
+        tree.children,
+        key=lambda n: len(list(n.tips())),
+        reverse=descending
+    )
+
+
 def read(file_name, file_format='newick'):
     """ Reads in contents from a file.
     """
