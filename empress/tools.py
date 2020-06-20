@@ -59,7 +59,8 @@ def match_inputs(
     sample_metadata,
     feature_metadata=None,
     ignore_missing_samples=False,
-    filter_missing_features=False
+    filter_missing_features=False,
+
 ):
     """Matches various input sources.
 
@@ -184,6 +185,13 @@ def match_inputs(
                 "tips in the tree. You can override this error by using the "
                 "--p-filter-missing-features flag."
             )
+
+    # remove unobserved features from the phylogeny
+    # TODO update tip_names and internal_node_names for feature metadata later
+    # TODO and return tree so that empress core can use it
+    # TODO and test this ofc ...
+    if filter_unobserved_features_from_phylogeny:
+        sheared_tree = tree.shear(tree_and_table_features)
 
     # Match table (post-feature-filtering, if done) and sample metadata.
     table_samples = set(ff_table.columns)

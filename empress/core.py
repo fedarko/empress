@@ -128,10 +128,6 @@ class Empress():
     def _validate_and_match_data(self, ignore_missing_samples,
                                  filter_missing_features,
                                  filter_unobserved_features_from_phylogeny):
-        # remove unobserved features from the phylogeny
-        if filter_unobserved_features_from_phylogeny:
-            self.tree = self.tree.shear(set(self.table.columns))
-
         # extract balance parenthesis
         self._bp_tree = list(self.tree.B)
 
@@ -145,7 +141,8 @@ class Empress():
         # table for the rest of this visualizer.
         self.table, self.samples, self.tip_md, self.int_md = match_inputs(
             self.tree, self.table.T, self.samples, self.features,
-            ignore_missing_samples, filter_missing_features
+            ignore_missing_samples, filter_missing_features,
+            filter_unobserved_features_from_phylogeny
         )
 
     def copy_support_files(self, target=None):
