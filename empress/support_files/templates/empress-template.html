@@ -41,10 +41,19 @@
       <h1 id="menu-box-node-id"></h1>
       <p id="menu-box-warning"></p>
       <h3 class="hidden" id="menu-fm-header">Feature Metadata</h3>
-      <table class="menu-table hidden" id="menu-fm-table"></table>
+      <!-- The tables need to be in <div>s so that the table can scroll.
+           I know, this is weird, but AFAICT it's either this or some funky CSS
+           on thead and tbody. See
+           https://www.w3schools.com/howto/howto_css_table_responsive.asp.
+      -->
+      <div class="menu-table-div">
+        <table class="menu-table hidden" id="menu-fm-table"></table>
+      </div>
       <h3 class="hidden" id="menu-sm-header">Sample Presence Information</h3>
       <p id="menu-box-notes"></p>
-      <table class="menu-table" id="menu-sm-table"></table>
+      <div class="menu-table-div">
+        <table class="menu-table" id="menu-sm-table"></table>
+      </div>
       <br><strong>Select a metadata column to summarize</strong>
       <label class="menu-select-container">
         <select id="menu-select"></select>
