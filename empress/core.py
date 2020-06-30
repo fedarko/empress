@@ -221,7 +221,7 @@ class Empress():
         for i, node in enumerate(self.tree.postorder(include_self=True), 1):
             tree_data[i] = {
                 'name': node.name,
-                'color': [0.75, 0.75, 0.75],
+                'color': [0, 0, 0],
                 'sampVal': 1,
                 'visible': True,
                 'single_samp': False
