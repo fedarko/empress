@@ -1003,9 +1003,21 @@ define([
         this._drawer.loadSampleThickBuf([]);
     };
 
+    Empress.prototype.setDefaultNodeColor = function (nodeColor) {
+        this.DEFAULT_COLOR = nodeColor;
+        this.resetTree();
+        this.drawTree();
+    }
+
+    Empress.prototype.setBGColor = function (bgColor) {
+        this._drawer.setBackgroundColor(bgColor);
+        this.resetTree();
+        this.drawTree();
+    }
+
     /**
      * Returns a list of sample categories
-     *
+
      * @return {Array}
      */
     Empress.prototype.getSampleCategories = function () {

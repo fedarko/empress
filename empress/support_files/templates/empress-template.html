@@ -3,6 +3,8 @@
   <head>
     <title>Empress</title>
     <link rel='stylesheet' type="text/css" href='{{ base_url }}/css/empress.css'>
+    <link rel='stylesheet' type="text/css" href='{{ base_url }}/vendor/css/spectrum.min.css'>
+    <!-- TODO: We should only set Spectrum CSS when *NOT* using Emperor, right? -->
     {{ emperor_style }}
 
     <script src='{{ base_url }}/vendor/js/require-2.1.22.min.js'></script>
@@ -78,6 +80,7 @@
             'jquery' : './vendor/js/jquery-2.2.4.min',
             'glMatrix' : './vendor/js/gl-matrix.min',
             'chroma' : './vendor/js/chroma.min',
+            'spectrum' : './vendor/js/spectrum.min',
             'underscore' : './vendor/js/underscore-min',
 
             'ByteArray' : './js/byte-array',
@@ -99,15 +102,15 @@
         }
     });
 
-    empressRequire(['jquery', 'glMatrix', 'chroma', 'underscore', 'ByteArray',
-                    'BPTree', 'Camera', 'Drawer', 'SidePanel', 'AnimationPanel',
-                    'Animator', 'BIOMTable', 'Empress', 'Legend', 'Colorer',
-                    'VectorOps', 'SummaryHelper', 'CanvasEvents',
-                    'SelectedNodeMenu', 'util'],
-        function($, gl, chroma, underscore, ByteArray, BPTree, Camera, Drawer,
-                 SidePanel, AnimationPanel, Animator, BIOMTable, Empress, Legend,
-                 Colorer, VectorOps, SummaryHelper, CanvasEvents,
-                 SelectedNodeMenu, util) {
+    empressRequire(['jquery', 'glMatrix', 'chroma', 'spectrum', 'underscore',
+                    'ByteArray', 'BPTree', 'Camera', 'Drawer', 'SidePanel',
+                    'AnimationPanel', 'Animator', 'BIOMTable', 'Empress',
+                    'Legend', 'Colorer', 'VectorOps', 'SummaryHelper',
+                    'CanvasEvents', 'SelectedNodeMenu', 'util'],
+        function($, gl, chroma, spectrum, underscore, ByteArray, BPTree,
+                 Camera, Drawer, SidePanel, AnimationPanel, Animator,
+                 BIOMTable, Empress, Legend, Colorer, VectorOps, SummaryHelper,
+                 CanvasEvents, SelectedNodeMenu, util) {
         // initialze the tree and model
         var tArr = new Uint8Array({{ tree }});
         var tree = new BPTree(tArr, {{ names }});

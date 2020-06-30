@@ -52,8 +52,9 @@ define(["glMatrix", "Camera"], function (gl, Camera) {
         this.cam = cam;
         this.VERTEX_SIZE = 5;
 
-        // sets empress to light mode
-        this.CLR_COL = 1;
+        // sets empress to light mode by default
+        // TODO: Centralize default colors somewhere
+        this.BG_COLOR = [1, 1, 1];
 
         // the center of the viewing window in tree coordinates
         this.treeSpaceCenterX = null;
@@ -81,8 +82,8 @@ define(["glMatrix", "Camera"], function (gl, Camera) {
             return;
         }
 
-        // initialze canvas to have fully white background
-        c.clearColor(this.CLR_COL, this.CLR_COL, this.CLR_COL, 1);
+        // initialze canvas' background color
+        this.setBackgroundColor(this.BG_COLOR);
         c.clear(c.COLOR_BUFFER_BIT | c.DEPTH_BUFFER_BIT);
 
         // create webGL program
@@ -134,6 +135,10 @@ define(["glMatrix", "Camera"], function (gl, Camera) {
 
         this._findViewingCenter();
     };
+
+    Drawer.prototype.setBackgroundColor = function(bgColor) {
+        this.contex_.clearColor(...bgColor, 1);
+    }
 
     /**
      * Sets the canvas size to be a square whose side length is equal to browser

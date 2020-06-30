@@ -1,4 +1,4 @@
-define(["underscore", "Colorer"], function (_, Colorer) {
+define(["jquery", "chroma", "underscore", "Colorer"], function ($, chroma, _, Colorer) {
     // class name for css tags
     var COLLAPSE_CLASS = "collapsible";
     /**
@@ -352,10 +352,8 @@ define(["underscore", "Colorer"], function (_, Colorer) {
 
     /**
      * Add the callback events for the global tree properties tab. The callback
-     * events include things like centering the tree and showing tree nodes.
-     *
-     * Other things such as changing the defualt color of the tree will be
-     * added.
+     * events include things like centering the tree, showing tree nodes, and
+     * changing default colors.
      */
     SidePanel.prototype.addTreePropertiesTab = function () {
         var scope = this;
@@ -365,6 +363,24 @@ define(["underscore", "Colorer"], function (_, Colorer) {
         this.recenterBtn.onclick = function () {
             scope.empress.centerLayoutAvgPoint();
         };
+        $("#dflt-node-color").spectrum({
+            color: "#000",
+            showInitial: true,
+            change: function (newColor) {
+                scope.empress.setDefaultNodeColor(
+                    chroma(newColor.toHexString()).gl().slice(0, 3)
+                );
+            }
+        });
+        $("#dflt-bg-color").spectrum({
+            color: "#fff",
+            showInitial: true,
+            change: function (newColor) {
+                scope.empress.setBGColor(
+                    chroma(newColor.toHexString()).gl().slice(0, 3)
+                );
+            }
+        });
     };
 
     SidePanel.prototype.updateFeatureMethodDesc = function () {
