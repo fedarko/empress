@@ -136,9 +136,9 @@ define(["glMatrix", "Camera"], function (gl, Camera) {
         this._findViewingCenter();
     };
 
-    Drawer.prototype.setBackgroundColor = function(bgColor) {
+    Drawer.prototype.setBackgroundColor = function (bgColor) {
         this.contex_.clearColor(...bgColor, 1);
-    }
+    };
 
     /**
      * Sets the canvas size to be a square whose side length is equal to browser

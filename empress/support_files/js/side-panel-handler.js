@@ -1,4 +1,9 @@
-define(["jquery", "chroma", "underscore", "Colorer"], function ($, chroma, _, Colorer) {
+define(["jquery", "chroma", "underscore", "Colorer"], function (
+    $,
+    chroma,
+    _,
+    Colorer
+) {
     // class name for css tags
     var COLLAPSE_CLASS = "collapsible";
     /**
@@ -370,7 +375,7 @@ define(["jquery", "chroma", "underscore", "Colorer"], function ($, chroma, _, Co
                 scope.empress.setDefaultNodeColor(
                     chroma(newColor.toHexString()).gl().slice(0, 3)
                 );
-            }
+            },
         });
         $("#dflt-bg-color").spectrum({
             color: "#fff",
@@ -379,7 +384,7 @@ define(["jquery", "chroma", "underscore", "Colorer"], function ($, chroma, _, Co
                 scope.empress.setBGColor(
                     chroma(newColor.toHexString()).gl().slice(0, 3)
                 );
-            }
+            },
         });
     };
 

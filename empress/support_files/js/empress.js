@@ -1005,15 +1005,20 @@ define([
 
     Empress.prototype.setDefaultNodeColor = function (nodeColor) {
         this.DEFAULT_COLOR = nodeColor;
+        // TODO: If we want to be able to preserve the current coloring state,
+        // we need to keep track of which nodes are already colored (or which
+        // are not colored, either could work) so that we can set the colors of
+        // the uncolored nodes to the new DEFAULT_COLOR.
         this.resetTree();
         this.drawTree();
-    }
+    };
 
     Empress.prototype.setBGColor = function (bgColor) {
+        // I think this works properly, but we should test and document it.
+        // TODO: also, use "BG" or "bg" or "Background" consistently ._.
         this._drawer.setBackgroundColor(bgColor);
-        this.resetTree();
         this.drawTree();
-    }
+    };
 
     /**
      * Returns a list of sample categories
