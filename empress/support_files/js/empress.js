@@ -629,10 +629,38 @@ define([
                 continue;
             }
             if (!this.getNodeInfo(node, "name").startsWith("EmpressNode")) {
+                var x = this.getX(node);
+                var y = this.getY(node);
+                var color = this.getNodeInfo(node, "color");
                 coords.push(
-                    this.getX(node),
-                    this.getY(node),
-                    ...this.getNodeInfo(node, "color")
+                    x - 3,
+                    y + 3,
+                    ...color
+                );
+                coords.push(
+                    x - 3,
+                    y - 3,
+                    ...color
+                );
+                coords.push(
+                    x + 3,
+                    y - 3,
+                    ...color
+                );
+                coords.push(
+                    x + 3,
+                    y - 3,
+                    ...color
+                );
+                coords.push(
+                    x + 3,
+                    y + 3,
+                    ...color
+                );
+                coords.push(
+                    x - 3,
+                    y + 3,
+                    ...color
                 );
             }
         }
@@ -648,6 +676,10 @@ define([
      */
     Empress.prototype.getCoords = function () {
         var tree = this._tree;
+        for (var i = 0; i <= tree.size; i++) {
+            this.setNodeInfo(this._treeData[i], "isColored", true);
+        }
+        return this.thickenColoredNodes(5);
 
         // The coordinates (and colors) of the tree's nodes.
         var coords = [];

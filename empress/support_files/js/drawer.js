@@ -354,10 +354,10 @@ define(["glMatrix", "Camera"], function (gl, Camera) {
 
         // draw tree node circles, if requested
         if (this.showTreeNodes) {
-            c.uniform1i(s.isSingle, 1);
+            c.uniform1i(s.isSingle, 0);
             c.uniform1f(s.pointSize, 4.0);
             this.bindBuffer(s.nodeVertBuff);
-            c.drawArrays(c.POINTS, 0, this.nodeSize);
+            c.drawArrays(c.TRIANGLES, 0, this.nodeSize);
         }
 
         // draw selected node
@@ -367,7 +367,7 @@ define(["glMatrix", "Camera"], function (gl, Camera) {
 
         c.uniform1i(s.isSingle, 0);
         this.bindBuffer(s.treeVertBuff);
-        c.drawArrays(c.LINES, 0, this.treeVertSize);
+        c.drawArrays(c.TRIANGLES, 0, this.treeVertSize);
 
         this.bindBuffer(s.thickNodeBuff);
         c.drawArrays(c.TRIANGLES, 0, this.thickNodeSize);
