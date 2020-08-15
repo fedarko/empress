@@ -629,6 +629,9 @@ define([
                 continue;
             }
             if (!this.getNodeInfo(node, "name").startsWith("EmpressNode")) {
+                // Instead of drawing a circle, draw a square (2 triangles)
+                // ... We could also approximate a circle by drawing "wedges"
+                // of it using triangles.
                 var x = this.getX(node);
                 var y = this.getY(node);
                 var color = this.getNodeInfo(node, "color");
