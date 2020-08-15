@@ -632,36 +632,12 @@ define([
                 var x = this.getX(node);
                 var y = this.getY(node);
                 var color = this.getNodeInfo(node, "color");
-                coords.push(
-                    x - 3,
-                    y + 3,
-                    ...color
-                );
-                coords.push(
-                    x - 3,
-                    y - 3,
-                    ...color
-                );
-                coords.push(
-                    x + 3,
-                    y - 3,
-                    ...color
-                );
-                coords.push(
-                    x + 3,
-                    y - 3,
-                    ...color
-                );
-                coords.push(
-                    x + 3,
-                    y + 3,
-                    ...color
-                );
-                coords.push(
-                    x - 3,
-                    y + 3,
-                    ...color
-                );
+                coords.push(x - 3, y + 3, ...color);
+                coords.push(x - 3, y - 3, ...color);
+                coords.push(x + 3, y - 3, ...color);
+                coords.push(x + 3, y - 3, ...color);
+                coords.push(x + 3, y + 3, ...color);
+                coords.push(x - 3, y + 3, ...color);
             }
         }
 
