@@ -152,6 +152,80 @@ def compress_table(table):
         f_ids_to_indices, compressed_table
     )
 
+def compress_recurring_md_vals(str_metadata_df):
+    """Replaces recurring values in a metadata DF with integers.
+
+    Parameters
+    ----------
+    str_metadata_df: pd.DataFrame
+        Sample or feature metadata. Index should describe samples (or
+        features), and columns should be metadata fields.
+
+    Returns
+    -------
+    (common_vals, compressed_md)
+        common_vals: list
+            List of "common values" that are used at least twice in the
+            metadata, sorted in descending order of frequency in the metadata
+            (with ties broken arbitrarily).
+        compressed_md: list
+            Two-dimensional list. The "outer list" is of length
+            len(str_metadata_df.index). Each position i within this outer
+            list holds an "inner list" of length len(str_metadata_df.columns).
+            The c-th value of the i-th inner list contains either:
+             -An integer, in which case the value referred to is located at
+              this integer's position in common_vals (using 0-indexing)
+             -A string value
+            In either case, the value referred to is the metadata value in
+            column c for the sample with index i.
+    """
+    num_cols = len(str_metadata_df.columns)
+
+    # Generate a numpy ndarray of all metadata values
+    vals_flattened = str_metadata_df.values.flatten()
+
+    # Count how many times each metadata value occurs, and (with most_common())
+    # sort these values in descending order of frequency. Note that the "sort
+    # in descending order" step isn't technically needed; although having the
+    # most frequent value be at position 0 in common_vals, etc. makes
+    # interpreting the compression results easier (and might save some space
+    # for large-enough datasets since writing "0" 1000 times takes up less
+    # characters than writing "1000" 1000 times), it's probably not a big deal.
+    vals_and_counts = Counter(vals_flattened).most_common()
+
+    # We temporarily store a mapping of each recurring value to its position in
+    # common_vals, to make populating compressed_md easier.
+    val2cvidx = {}
+    common_vals = []
+    for (val, ct) in vals_and_counts:
+        if ct > 1:
+            val2cvidx[val] = len(common_vals)
+            common_vals.append(val)
+        else:
+            # Since vals_and_counts is in descending order, once we get to a
+            # value that only occurs once (i.e. this value is not "recurring")
+            # we can stop iterating through vals_and_counts.
+            break
+
+    # Fill in compressed_md (a 2-D list representation of the input metadata)
+    # with each recurring value replaced with an integer pointing to a position
+    # in common_vals.
+    compressed_md = []
+    c = 0
+    for val in vals_flattened:
+        if c % num_cols == 0:
+            compressed_md.append([])
+        # Add this value (either a number in common_vals or the actual string
+        # value) to the last list in compressed_md, corresponding to the
+        # current sample / feature (depending on what type of metadata this is)
+        if val in val2cvidx:
+            compressed_md[-1].append(val2cvidx[val])
+        else:
+            compressed_md[-1].append(val)
+        c += 1
+
+    return common_vals, compressed_md
+
 
 def compress_sample_metadata(s_ids_to_indices, metadata):
     """Converts a sample metadata DataFrame to a space-saving format.
@@ -226,52 +300,11 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
     # Convert all of the metadata values to strings
     str_s_i_metadata = sorted_i_metadata.astype(str)
 
-    # Also conver the metadata columns to strings
+    # Also convert the metadata columns to strings
     sm_cols = [str(c) for c in str_s_i_metadata.columns]
 
-    # Generate a numpy ndarray of all metadata values
-    sm_vals_flattened = str_s_i_metadata.values.flatten()
-
-    # Count how many times each sample metadata value occurs, and (using
-    # .most_common()) sort these values in descending order of frequency.
-    # Note that the "sort in descending order" step isn't technically needed;
-    # although having the most frequent value be at position 0 in common_vals,
-    # etc. makes interpreting the compression results easier (and might save
-    # some space for large-enough datasets since writing "0" 1000 times takes
-    # up less characters than writing "1000" 1000 times), it's probably not a
-    # huge deal.
-    vals_and_counts = Counter(sm_vals_flattened).most_common()
-
-    # If a given value occurs at least twice, then we can (usually) save space
-    # by only referencing it just once in common_vals, and just using an
-    # integer to point to this position in compressed_sm.
-    # We temporarily store a mapping of a non-unique value to its position in
-    # common_vals, to make populating compressed_sm easier.
-    val2cvidx = {}
-    common_vals = []
-    for (val, ct) in vals_and_counts:
-        if ct > 1:
-            val2cvidx[val] = len(common_vals)
-            common_vals.append(val)
-        else:
-            break
-
-    # Fill in compressed_sm (a 2-D list representation of the input metadata)
-    # with each non-unique value replaced with an integer pointing to a
-    # position in common_vals.
-    compressed_sm = []
-    c = 0
-    for val in sm_vals_flattened:
-        if c % len(sm_cols) == 0:
-            compressed_sm.append([])
-        # Add this value (either a number in common_vals or the actual string
-        # value) to the last list in compressed_sm, corresponding to the
-        # current sample
-        if val in val2cvidx:
-            compressed_sm[-1].append(val2cvidx[val])
-        else:
-            compressed_sm[-1].append(val)
-        c += 1
+    # Compress recurring values and convert the metadata to a 2-D list
+    common_vals, compressed_sm = compress_recurring_md_vals(str_s_i_metadata)
 
     return sm_cols, common_vals, compressed_sm
 
