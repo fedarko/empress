@@ -152,6 +152,7 @@ def compress_table(table):
         f_ids_to_indices, compressed_table
     )
 
+
 def compress_recurring_md_vals(str_metadata_df):
     """Replaces recurring values in a metadata DF with integers.
 
