@@ -274,9 +274,9 @@ class Empress():
         # Use nodes' postorder positions as their "IDs" for the BIOM table and
         # feature metadata
         fid2idxs = {}
-        compressed_tm = {}
-        compressed_im = {}
         # bptree indices start at one, hence we pad the arrays
+        compressed_tm = [[]]
+        compressed_im = [[]]
         names = [-1]
         lengths = [-1]
         for i, node in enumerate(self.tree.postorder(include_self=True), 1):
@@ -287,13 +287,12 @@ class Empress():
                 f_ids[fid2idxs[i]] = i
 
             if node.name in compressed_tm_tmp:
-                compressed_tm[i] = compressed_tm_tmp[node.name]
-
+                compressed_tm.append(compressed_tm_tmp[node.name])
             # Note: for internal metadata, node names may not be unique. Thus,
             # we duplicate the internal node metadata for each node in the
             # metadata with the same name.
-            if node.name in compressed_im_tmp:
-                compressed_im[i] = compressed_im_tmp[node.name]
+            elif node.name in compressed_im_tmp:
+                compressed_im.append(compressed_im_tmp[node.name])
 
         data_to_render = {
             'base_url': self.base_url,
