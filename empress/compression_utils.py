@@ -7,6 +7,9 @@
 # ----------------------------------------------------------------------------
 
 
+from collections import Counter
+
+
 def remove_empty_samples_and_features(table, sample_metadata, ordination=None):
     """Removes empty samples and features from the table and sample metadata.
 
@@ -153,13 +156,6 @@ def compress_table(table):
 def compress_sample_metadata(s_ids_to_indices, metadata):
     """Converts a sample metadata DataFrame to a space-saving format.
 
-    We could ostensibly save more space by identifying repeated metadata
-    values and mapping *those* to integer IDs. (For example, a lot of Qiita
-    studies' sample metadata files have lots of frequently repeated values like
-    "host_subject_id", the various empo_* fields, etc.) However, that may be
-    1) overkill and 2) not worth it until we get to really big datasets
-    (and/or datasets with lots of repeated values).
-
     Parameters
     ----------
     s_ids_to_indices: dict
@@ -174,16 +170,23 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
 
     Returns
     -------
-    (metadata_columns, metadata_vals)
-        metadata_columns: list
+    (sm_cols, common_vals, compressed_sm)
+        sm_cols: list
             List of the sample metadata column names, all converted to strings.
-        metadata_vals: list
+        common_vals: list
+            List of "common values" that are used at least twice in the sample
+            metadata, sorted in descending order of frequency in the sample
+            metadata (with ties broken arbitrarily).
+        compressed_sm: list
             Two-dimensional list. The "outer list" is of length
             len(s_ids_to_indices.keys()). Each position i within this outer
             list holds an "inner list" of length len(metadata_columns).
-            The c-th value of the i-th inner list contains the c-th
-            sample metadata column (in metadata_columns)'s value for the
-            sample with index i, converted to a string.
+            The c-th value of the i-th inner list contains either:
+             -An integer, in which case the value referred to is located at
+              this integer's position in common_vals (using 0-indexing)
+             -A string value
+            In either case, the value referred to is the sample metadata value
+            in column c for the sample with index i.
 
     Raises
     ------
@@ -223,13 +226,54 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
     # Convert all of the metadata values to strings
     str_s_i_metadata = sorted_i_metadata.astype(str)
 
-    # Generate a 2-D list of metadata values
-    # Based on https://datatofish.com/convert-pandas-dataframe-to-list
-    sm_vals = str_s_i_metadata.values.tolist()
-
+    # Also conver the metadata columns to strings
     sm_cols = [str(c) for c in str_s_i_metadata.columns]
 
-    return sm_cols, sm_vals
+    # Generate a numpy ndarray of all metadata values
+    sm_vals_flattened = str_s_i_metadata.values.flatten()
+
+    # Count how many times each sample metadata value occurs, and (using
+    # .most_common()) sort these values in descending order of frequency.
+    # Note that the "sort in descending order" step isn't technically needed;
+    # although having the most frequent value be at position 0 in common_vals,
+    # etc. makes interpreting the compression results easier (and might save
+    # some space for large-enough datasets since writing "0" 1000 times takes
+    # up less characters than writing "1000" 1000 times), it's probably not a
+    # huge deal.
+    vals_and_counts = Counter(sm_vals_flattened).most_common()
+
+    # If a given value occurs at least twice, then we can (usually) save space
+    # by only referencing it just once in common_vals, and just using an
+    # integer to point to this position in compressed_sm.
+    # We temporarily store a mapping of a non-unique value to its position in
+    # common_vals, to make populating compressed_sm easier.
+    val2cvidx = {}
+    common_vals = []
+    for (val, ct) in vals_and_counts:
+        if ct > 1:
+            val2cvidx[val] = len(common_vals)
+            common_vals.append(val)
+        else:
+            break
+
+    # Fill in compressed_sm (a 2-D list representation of the input metadata)
+    # with each non-unique value replaced with an integer pointing to a
+    # position in common_vals.
+    compressed_sm = []
+    c = 0
+    for val in sm_vals_flattened:
+        if c % len(sm_cols) == 0:
+            compressed_sm.append([])
+        # Add this value (either a number in common_vals or the actual string
+        # value) to the last list in compressed_sm, corresponding to the
+        # current sample
+        if val in val2cvidx:
+            compressed_sm[-1].append(val2cvidx[val])
+        else:
+            compressed_sm[-1].append(val)
+        c += 1
+
+    return sm_cols, common_vals, compressed_sm
 
 
 def compress_feature_metadata(tip_metadata, int_metadata):

@@ -133,6 +133,7 @@
           {{ f_ids_to_indices | tojson }},
           {{ compressed_table | tojson }},
           {{ sample_metadata_columns | tojson }},
+          {{ common_sample_metadata_values | tojson }},
           {{ compressed_sample_metadata | tojson }},
         );
         var empress = new Empress(

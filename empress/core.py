@@ -265,7 +265,7 @@ class Empress():
         s_ids, f_ids, sid2idxs, fid2idxs_t, compressed_table = compress_table(
             self.table
         )
-        sm_cols, compressed_sm = compress_sample_metadata(
+        sm_cols, common_sm_vals, compressed_sm = compress_sample_metadata(
             sid2idxs, self.samples
         )
         fm_cols, compressed_tm_tmp, compressed_im_tmp = \
@@ -309,6 +309,7 @@ class Empress():
             'compressed_table': compressed_table,
             # sample metadata
             'sample_metadata_columns': sm_cols,
+            'common_sample_metadata_values': common_sm_vals,
             'compressed_sample_metadata': compressed_sm,
             # feature metadata
             'feature_metadata_columns': fm_cols,
