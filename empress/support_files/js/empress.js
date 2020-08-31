@@ -30,12 +30,7 @@ define([
      *                                         metadata.
      * @param {Canvas} canvas The HTML canvas that the tree will be drawn on.
      */
-    function Empress(
-        tree,
-        biom,
-        fmHolder,
-        canvas
-    ) {
+    function Empress(tree, biom, fmHolder, canvas) {
         /**
          * @type {Camera}
          * The camera used to look at the tree
@@ -1394,7 +1389,7 @@ define([
                 var color;
                 if (layer.colorByFM) {
                     if (this._fmHolder.hasTipMetadata(node)) {
-                        fm = this._fmHolder.getTipMetadata(node, colorFMIdx);
+                        fm = this._fmHolder.getValue(node, colorFMIdx, "tip");
                         if (_.has(fm2color, fm)) {
                             color = fm2color[fm];
                         } else {
@@ -1418,7 +1413,7 @@ define([
                 var length;
                 if (layer.scaleLengthByFM) {
                     if (this._fmHolder.hasTipMetadata(node)) {
-                        fm = this._fmHolder.getTipMetadata(node, lengthFMIdx);
+                        fm = this._fmHolder.getValue(node, lengthFMIdx, "tip");
                         if (_.has(fm2length, fm)) {
                             length = fm2length[fm];
                         } else {
@@ -1837,6 +1832,19 @@ define([
      */
     Empress.prototype.getFeatureMetadataCategories = function () {
         return this._fmHolder.getCols();
+    };
+
+    /**
+     * Returns a row of feature metadata for a given node.
+     *
+     * @param {Number} node Postorder position of a node in the tree
+     * @param {String} nodeType Should be one of "tip" or "int", depending on
+     *                          whether the node is a tip or internal node.
+     *
+     * @return {Array}
+     */
+    Empress.prototype.getFeatureMetadataRow = function (node, nodeType) {
+        return this._fmHolder.getRow(node, nodeType);
     };
 
     /**

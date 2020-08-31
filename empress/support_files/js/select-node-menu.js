@@ -124,11 +124,10 @@ define(["underscore", "util"], function (_, util) {
      *                      mdObj. If this is an empty array, this function
      *                      won't create anything, and will hide the fmHeader
      *                      and fmTable elements -- see above for details.
-     * @param{Object} mdObj Object describing feature metadata. The keys should
-     *                      be node names, and the value for a node name N
-     *                      should be another Object mapping the metadata
-     *                      columns (in mdCols) to the metadata values for
-     *                      the node name N.
+     * @param{Array or null} mdRow Row of feature metadata for the specified
+     *                             node name. If this is null, it's assumed
+     *                             that this node does not have any assigned
+     *                             feature metadata: so no table will be shown.
      * @param{HTMLElement} fmHeader A reference to a header HTML element to
      *                              hide / unhide depending on whether or not
      *                              feature metadata will be shown for this
@@ -141,16 +140,14 @@ define(["underscore", "util"], function (_, util) {
     SelectedNodeMenu.makeFeatureMetadataTable = function (
         nodeName,
         mdCols,
-        mdObj,
+        mdRow,
         fmHeader,
         fmTable
     ) {
         fmTable.innerHTML = "";
-        // If there is feature metadata, and if this node name is present as a
-        // key in the feature metadata, then show this information.
-        // (This uses boolean short-circuiting, so the _.has() should only be
-        // evaluated if mdCols has a length of > 0.)
-        if (mdCols.length > 0 && _.has(mdObj, nodeName)) {
+        // If there is feature metadata, and if this node has feature metadata,
+        // then show this information.
+        if (mdCols.length > 0 && !_.isNull(mdRow)) {
             var headerRow = fmTable.insertRow(-1);
             var featureRow = fmTable.insertRow(-1);
             for (var x = 0; x < mdCols.length; x++) {
@@ -234,8 +231,8 @@ define(["underscore", "util"], function (_, util) {
         // the selected node menu will be hidden)
         SelectedNodeMenu.makeFeatureMetadataTable(
             node,
-            this.empress._featureMetadataColumns,
-            this.empress._tipMetadata,
+            this.empress.getFeatureMetadataCategories(),
+            this.empress.getFeatureMetadataRow(node, "tip"),
             this.fmHeader,
             this.fmTable
         );
@@ -310,8 +307,8 @@ define(["underscore", "util"], function (_, util) {
         // feature metadata; this isn't a problem)
         SelectedNodeMenu.makeFeatureMetadataTable(
             this.nodeKeys[0],
-            this.empress._featureMetadataColumns,
-            this.empress._intMetadata,
+            this.empress.getFeatureMetadataCategories(),
+            this.empress.getFeatureMetadataRow(this.nodeKeys[0], "int"),
             this.fmHeader,
             this.fmTable
         );

@@ -1,10 +1,4 @@
-define([
-    "underscore",
-    "util",
-], function (
-    _,
-    util
-) {
+define(["underscore", "util"], function (_, util) {
     /**
      * @class FeatureMetadataHolder
      *
@@ -37,7 +31,7 @@ define([
         featureMetadataColumns,
         recurringValues,
         tipMetadata,
-        intMetadata,
+        intMetadata
     ) {
         /**
          * @type{Array}
@@ -53,6 +47,13 @@ define([
          * @private
          */
         this._recurringValues = recurringValues;
+
+        /**
+         * @type{Number}
+         * Number of unique values in this._recurringValues.
+         * @private
+         */
+        this._numRecurringValues = this._recurringValues.length;
 
         /**
          * @type{Object}
@@ -110,27 +111,28 @@ define([
     };
 
     /**
-     * Returns the tip metadata value of a given node at a given column index.
-     *
-     * This assumes that the node is present in this._tipMetadata. If it isn't,
-     * this'll just spit out an undefined. (So: it's the caller's
-     * responsibility to verify that this node actually is a tip and has
-     * metadata before calling this.)
+     * Returns the metadata value of a given node at a given column index.
      *
      * @param {Number} node Postorder position of a node in the tree
      * @param {Number} colIdx 0-indexed position of a feature metadata column
-     *                        in this._featureMetadataColumns. This should have
-     *                        been computed by this.getColIdx().
+     *                        in this._featureMetadataColumns; this should have
+     *                        been computed by this.getColIdx()
      *                        TODO refactor to use col name
      * @param {String} nodeType Should be one of "tip" or "int": "tip"
      *                          indicates that this is a tip node, and "int"
-     *                          indicates that this is an internal node.
+     *                          indicates that this is an internal node
      *
      * @return {String} Feature metadata value
      *
-     * @throw {Error} If nodeType is not "tip" or "int"
+     * @throw {Error} If nodeType is not "tip" or "int", or if the node and/or
+     *                column index are not present in the tip or internal node
+     *                feature metadata
      */
-    FeatureMetadataHolder.prototype.getValue = function (node, colIdx, nodeType) {
+    FeatureMetadataHolder.prototype.getValue = function (
+        node,
+        colIdx,
+        nodeType
+    ) {
         var initialVal;
         if (nodeType === "tip") {
             initialVal = this._tipMetadata[node][colIdx];
@@ -141,14 +143,97 @@ define([
                 "Unrecognized nodeType " + nodeType + " specified."
             );
         }
+        if (_.isUndefined(initialVal)) {
+            throw new Error(
+                "Node " +
+                    node +
+                    " and/or col index " +
+                    colIdx +
+                    " not in " +
+                    nodeType +
+                    " feature metadata."
+            );
+        }
         return this._uncompressValue(initialVal);
     };
 
-    // If this value occurs more than once in the metadata, it will have
-    // been replaced in the metadata with a Number pointing to an index in
-    // this._recurringVals. Use the type of initialVal to see what to do.
+    /**
+     * Returns all feature metadata values for a given node, in the same order
+     * as this._featureMetadataColumns.
+     *
+     * Unlike getValue(), this doesn't raise an error if the node isn't present
+     * in the feature metadata -- instead, it'll just return null in that case.
+     *
+     * @param {Number} node Postorder position of a node in the tree
+     * @param {String} nodeType Should be one of "tip" or "int": "tip"
+     *                          indicates that this is a tip node, and "int"
+     *                          indicates that this is an internal node
+     *
+     * @return {String or null} Row of feature metadata values (uncompressed,
+     *                          so no need to worry about recurring values
+     *                          being replaced with numbers) if the node is
+     *                          present in the feature metadata based on the
+     *                          specified nodeType; null if the node is not
+     *                          present in the feature metadata based on
+     *                          nodeType
+     *
+     * @throw {Error} If nodeType is not "tip" or "int"
+     */
+    FeatureMetadataHolder.prototype.getRow = function (node, nodeType) {
+        var row;
+        if (nodeType === "tip") {
+            row = this._tipMetadata[node];
+        } else if (nodeType === "int") {
+            row = this._intMetadata[node];
+        } else {
+            throw new Error(
+                "Unrecognized nodeType " + nodeType + " specified."
+            );
+        }
+        // If the node isn't in the specified f.m. type, return null
+        if (_.isUndefined(row)) {
+            return null;
+        }
+        return _.map(row, uncompressValue);
+    };
+
+    /**
+     * Attempts to un-compress a value in the feature metadata, if needed.
+     *
+     * If a value occurs more than once in the metadata, it will have
+     * been replaced in the metadata with a Number pointing to an index in
+     * this._recurringVals. Since all other values should be stored as Strings
+     * in the metadata, this uses the type of the value to see what to do.
+     *
+     * @param {String or Number} val A value in the feature metadata.
+     *
+     * @return {String} The input value, if it was of type String; or the
+     *                  val-th value in this._recurringValues, if it was of
+     *                  type Number.
+     *
+     * @throw {Error} If val is a Number but it isn't in an integer in the
+     *                range [0, this._numRecurringValues).
+     */
     FeatureMetadataHolder.prototype._uncompressValue = function (val) {
         if (typeof val === Number) {
+            if (val >= this._numRecurringValues || val < 0) {
+                throw new Error(
+                    "Invalid recurring value compression: numerical " +
+                        "value is " +
+                        val +
+                        ", which is out of the range " +
+                        "[0, " +
+                        this._numRecurringValues +
+                        ")."
+                );
+            } else if (!Number.isInteger(val)) {
+                throw new Error(
+                    "Invalid recurring value compression: numerical " +
+                        "value " +
+                        val +
+                        " is not an integer."
+                );
+            }
             return this._recurringVals[val];
         }
         return val;
