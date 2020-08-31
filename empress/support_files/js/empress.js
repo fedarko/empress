@@ -26,28 +26,14 @@ define([
      *
      * @param {BPTree} tree The phylogenetic tree
      * @param {BIOMTable} biom The BIOM table used to color the tree
-     * @param {Array} featureMetadataColumns Columns of the feature metadata.
-     *                Note: The order of this array should match the order of
-     *                      the arrays which are the values of tipMetadata and
-     *                      intMetadata. If no feature metadata was provided
-     *                      when generating an Empress visualization, this
-     *                      parameter should be [] (and tipMetadata and
-     *                      intMetadata should be {}s).
-     * @param {Object} tipMetadata Feature metadata for tips in the tree
-     *                 Note: This should map tip names to an array of feature
-     *                       metadata values. Each array should have the same
-     *                       length as featureMetadataColumns.
-     * @param {Object} intMetadata Feature metadata for internal nodes in tree
-     *                 Note: Should be formatted analogously to tipMetadata.
-     *                       Note that internal node names can be non-unique.
+     * @param {FeatureMetadataHolder} fmHolder Structure that accesses feature
+     *                                         metadata.
      * @param {Canvas} canvas The HTML canvas that the tree will be drawn on.
      */
     function Empress(
         tree,
         biom,
-        featureMetadataColumns,
-        tipMetadata,
-        intMetadata,
+        fmHolder,
         canvas
     ) {
         /**
@@ -149,22 +135,11 @@ define([
         this._biom = biom;
 
         /**
-         * @type{Array}
-         * Feature metadata column names.
+         * @type{FeatureMetadataHolder}
+         * Manages feature metadata.
          * @private
          */
-        this._featureMetadataColumns = featureMetadataColumns;
-
-        /**
-         * @type{Object}
-         * Feature metadata: keys are tree node names, and values are arrays
-         * of length equal to this._featureMetadataColumns.length.
-         * For the sake of simplicity, we split this up into tip and internal
-         * node feature metadata objects.
-         * @private
-         */
-        this._tipMetadata = tipMetadata;
-        this._intMetadata = intMetadata;
+        this._fmHolder = fmHolder;
 
         /**
          * @type{Object}
@@ -1342,17 +1317,14 @@ define([
         // layer.colorByFM is true). If not requested, we'll just use the
         // layer's default color.
         if (layer.colorByFM) {
-            var sortedUniqueColorValues = this.getUniqueFeatureMetadataInfo(
+            var sortedUniqueColorValues = this._fmHolder.getUniqueInfo(
                 layer.colorByFMField,
                 "tip"
             ).sortedUniqueValues;
             // If this field is invalid then an error would have been
-            // raised in this.getUniqueFeatureMetadataInfo().
+            // raised in this._fmHolder.getUniqueInfo().
             // (But... it really shouldn't be.)
-            colorFMIdx = _.indexOf(
-                this._featureMetadataColumns,
-                layer.colorByFMField
-            );
+            colorFMIdx = this._fmHolder.getColIdx(layer.colorByFMField);
             // We pass the true/false value of the "Continuous values?"
             // checkbox to Colorer regardless of if the selected color map
             // is discrete or sequential/diverging. This is because the Colorer
@@ -1391,14 +1363,11 @@ define([
 
         // Next, map feature metadata values to lengths if requested
         if (layer.scaleLengthByFM) {
-            var sortedUniqueLengthValues = this.getUniqueFeatureMetadataInfo(
+            var sortedUniqueLengthValues = this._fmHolder.getUniqueInfo(
                 layer.scaleLengthByFMField,
                 "tip"
             ).sortedUniqueValues;
-            lengthFMIdx = _.indexOf(
-                this._featureMetadataColumns,
-                layer.scaleLengthByFMField
-            );
+            lengthFMIdx = this._fmHolder.getColIdx(layer.scaleLengthByFMField);
             try {
                 fm2length = util.assignBarplotLengths(
                     sortedUniqueLengthValues,
@@ -1424,8 +1393,8 @@ define([
                 // Assign this tip's bar a color
                 var color;
                 if (layer.colorByFM) {
-                    if (_.has(this._tipMetadata, node)) {
-                        fm = this._tipMetadata[node][colorFMIdx];
+                    if (this._fmHolder.hasTipMetadata(node)) {
+                        fm = this._fmHolder.getTipMetadata(node, colorFMIdx);
                         if (_.has(fm2color, fm)) {
                             color = fm2color[fm];
                         } else {
@@ -1448,8 +1417,8 @@ define([
                 // Assign this tip's bar a length
                 var length;
                 if (layer.scaleLengthByFM) {
-                    if (_.has(this._tipMetadata, node)) {
-                        fm = this._tipMetadata[node][lengthFMIdx];
+                    if (this._fmHolder.hasTipMetadata(node)) {
+                        fm = this._fmHolder.getTipMetadata(node, lengthFMIdx);
                         if (_.has(fm2length, fm)) {
                             length = fm2length[fm];
                         } else {
@@ -1580,79 +1549,11 @@ define([
     };
 
     /**
-     * Retrieve unique value information for a feature metadata field.
-     *
-     * @param {String} cat The feature metadata column to find information for.
-     *                     Must be present in this._featureMetadataColumns or
-     *                     an error will be thrown.
-     * @param {String} method Defines what feature metadata to check.
-     *                        If this is "tip", then only tip-level feature
-     *                        metadata will be used. If this is "all", then
-     *                        this will use both tip and internal node feature
-     *                        metadata. If this is anything else, this will
-     *                        throw an error.
-     * @return {Object} An object with two keys:
-     *                  -sortedUniqueValues: maps to an Array of the unique
-     *                   values in this feature metadata field, sorted using
-     *                   util.naturalSort().
-     *                  -uniqueValueToFeatures: maps to an Object which maps
-     *                   the unique values in this feature metadata column to
-     *                   an array of the node name(s) with each value.
-     */
-    Empress.prototype.getUniqueFeatureMetadataInfo = function (cat, method) {
-        // In order to access feature metadata for a given node, we need to
-        // find the 0-based index in this._featureMetadataColumns that the
-        // specified f.m. column corresponds to. (We *could* get around this by
-        // generating a mapping of f.m. column name -> index in Python, but I
-        // don't expect that f.m. columns will be very large and this is only
-        // done once per coloring operation so this shouldn't be a bottleneck.)
-        var fmIdx = _.indexOf(this._featureMetadataColumns, cat);
-        if (fmIdx < 0) {
-            throw 'Feature metadata column "' + cat + '" not present in data.';
-        }
-
-        // The coloring method influences how much of the feature metadata
-        // we'll look at. (While we're at it, validate the coloring method.)
-        var fmObjs;
-        if (method === "tip") {
-            fmObjs = [this._tipMetadata];
-        } else if (method === "all") {
-            fmObjs = [this._tipMetadata, this._intMetadata];
-        } else {
-            throw 'F. metadata coloring method "' + method + '" unrecognized.';
-        }
-        // Produce a mapping of unique values in this feature metadata
-        // column to an array of the node name(s) with each value.
-        var uniqueValueToFeatures = {};
-        _.each(fmObjs, function (mObj) {
-            _.mapObject(mObj, function (fmRow, node) {
-                // need to convert to integer
-                node = parseInt(node);
-                // This is loosely based on how BIOMTable.getObsBy() works.
-                var fmVal = fmRow[fmIdx];
-                if (_.has(uniqueValueToFeatures, fmVal)) {
-                    uniqueValueToFeatures[fmVal].push(node);
-                } else {
-                    uniqueValueToFeatures[fmVal] = [node];
-                }
-            });
-        });
-
-        var sortedUniqueValues = util.naturalSort(
-            Object.keys(uniqueValueToFeatures)
-        );
-        return {
-            sortedUniqueValues: sortedUniqueValues,
-            uniqueValueToFeatures: uniqueValueToFeatures,
-        };
-    };
-
-    /**
      * Color the tree based on a feature metadata column.
      *
      * @param {String} cat The feature metadata column to color nodes by.
-     *                     This must be present in this._featureMetadataColumns
-     *                     or an error will be thrown.
+     *                     This must be present in the feature metadata columns
+     *                     or this._fmHolder will throw an error.
      * @param {String} color The name of the color map to use.
      * @param {String} method Defines how coloring is done. If this is "tip",
      *                        then only tip-level feature metadata will be
@@ -1667,7 +1568,7 @@ define([
      * @return {Object} Maps unique values in this f. metadata column to colors
      */
     Empress.prototype.colorByFeatureMetadata = function (cat, color, method) {
-        var fmInfo = this.getUniqueFeatureMetadataInfo(cat, method);
+        var fmInfo = this._fmHolder.getUniqueInfo(cat, method);
         var sortedUniqueValues = fmInfo.sortedUniqueValues;
         var uniqueValueToFeatures = fmInfo.uniqueValueToFeatures;
         // convert observation IDs to _treeData keys. Notably, this includes
@@ -1935,7 +1836,7 @@ define([
      * @return {Array}
      */
     Empress.prototype.getFeatureMetadataCategories = function () {
-        return this._featureMetadataColumns;
+        return this._fmHolder.getCols();
     };
 
     /**

@@ -124,6 +124,13 @@
 
         var fmCols = {{ feature_metadata_columns | tojson }};
 
+        var fmHolder = new FeatureMetadataHolder(
+            fmCols,
+            {{ recurring_feature_metadata_values | tojson }},
+            {{ compressed_tip_metadata | tojson }},
+            {{ compressed_int_metadata | tojson }}
+        );
+
         var canvas = document.getElementById('tree-surface');
 
         var biom = new BIOMTable(
@@ -133,16 +140,13 @@
           {{ f_ids_to_indices | tojson }},
           {{ compressed_table | tojson }},
           {{ sample_metadata_columns | tojson }},
-          {{ common_sample_metadata_values | tojson }},
+          {{ recurring_sample_metadata_values | tojson }},
           {{ compressed_sample_metadata | tojson }},
         );
         var empress = new Empress(
             tree,
             biom,
-            fmCols,
-            {{ common_feature_metadata_values | tojson }},
-            {{ compressed_tip_metadata | tojson }},
-            {{ compressed_int_metadata | tojson }},
+            fmHolder,
             canvas
         );
         empress.initialize();

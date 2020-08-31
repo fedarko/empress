@@ -266,7 +266,7 @@ class Empress():
         s_ids, f_ids, sid2idxs, fid2idxs_t, cmp_table = compress_table(
             self.table
         )
-        sm_cols, common_sm_vals, cmp_sm = compress_sample_metadata(
+        sm_cols, recurring_sm_vals, cmp_sm = compress_sample_metadata(
             sid2idxs, self.samples
         )
 
@@ -292,7 +292,7 @@ class Empress():
 
             name2treepos[node.name].append(i)
 
-        fm_cols, common_fm_vals, cmp_tm, cmp_im = compress_feature_metadata(
+        fm_cols, recurring_fm_vals, cmp_tm, cmp_im = compress_feature_metadata(
             self.tip_md, self.int_md, name2treepos
         )
 
@@ -310,11 +310,11 @@ class Empress():
             'compressed_table': cmp_table,
             # sample metadata
             'sample_metadata_columns': sm_cols,
-            'common_sample_metadata_values': common_sm_vals,
+            'recurring_sample_metadata_values': recurring_sm_vals,
             'compressed_sample_metadata': cmp_sm,
             # feature metadata
             'feature_metadata_columns': fm_cols,
-            'common_feature_metadata_values': common_fm_vals,
+            'recurring_feature_metadata_values': recurring_fm_vals,
             'compressed_tip_metadata': cmp_tm,
             'compressed_int_metadata': cmp_im,
             # Emperor integration

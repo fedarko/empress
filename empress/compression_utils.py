@@ -167,9 +167,9 @@ def compress_recurring_md_vals(str_metadata_df, output_type="list"):
 
     Returns
     -------
-    (common_vals, compressed_md)
-        common_vals: list
-            List of "common values" that are used at least twice in the
+    (recurring_vals, compressed_md)
+        recurring_vals: list
+            List of "recurring values" that are used at least twice in the
             metadata, sorted in descending order of frequency in the metadata
             (with ties broken arbitrarily).
         compressed_md: list
@@ -178,7 +178,7 @@ def compress_recurring_md_vals(str_metadata_df, output_type="list"):
             list holds an "inner list" of length len(str_metadata_df.columns).
             The c-th value of the i-th inner list contains either:
              -An integer, in which case the value referred to is located at
-              this integer's position in common_vals (using 0-indexing)
+              this integer's position in recurring_vals (using 0-indexing)
              -A string value
             In either case, the value referred to is the metadata value in
             column c for the sample with index i.
@@ -192,20 +192,20 @@ def compress_recurring_md_vals(str_metadata_df, output_type="list"):
     # Count how many times each metadata value occurs, and (with most_common())
     # sort these values in descending order of frequency. Note that the "sort
     # in descending order" step isn't technically needed; although having the
-    # most frequent value be at position 0 in common_vals, etc. makes
+    # most frequent value be at position 0 in recurring_vals, etc. makes
     # interpreting the compression results easier (and might save some space
     # for large-enough datasets since writing "0" 1000 times takes up less
     # characters than writing "1000" 1000 times), it's probably not a big deal.
     vals_and_counts = Counter(vals_flattened).most_common()
 
     # We temporarily store a mapping of each recurring value to its position in
-    # common_vals, to make populating compressed_md easier.
+    # recurring_vals, to make populating compressed_md easier.
     val2cvidx = {}
-    common_vals = []
+    recurring_vals = []
     for (val, ct) in vals_and_counts:
         if ct > 1:
-            val2cvidx[val] = len(common_vals)
-            common_vals.append(val)
+            val2cvidx[val] = len(recurring_vals)
+            recurring_vals.append(val)
         else:
             # Since vals_and_counts is in descending order, once we get to a
             # value that only occurs once (i.e. this value is not "recurring")
@@ -213,23 +213,26 @@ def compress_recurring_md_vals(str_metadata_df, output_type="list"):
             break
 
     if output_type == "list":
-        # Fill in compressed_md (a 2-D list representation of the input metadata)
-        # with each recurring value replaced with an integer pointing to a position
-        # in common_vals.
+        # compressed_md will be a 2-D list representation of the input metadata
+        # with each recurring value replaced with an integer pointing to a
+        # position in recurring_vals.
         compressed_md = []
         c = 0
         for val in vals_flattened:
             if c % num_cols == 0:
                 compressed_md.append([])
-            # Add this value (either a number in common_vals or the actual string
-            # value) to the last list in compressed_md, corresponding to the
-            # current sample / feature (depending on what type of metadata this is)
+            # Add this value (either a number in recurring_vals or the actual
+            # string value) to the last list in compressed_md, corresponding to
+            # the current sample or feature
             if val in val2cvidx:
                 compressed_md[-1].append(val2cvidx[val])
             else:
                 compressed_md[-1].append(val)
             c += 1
     elif output_type == "dict":
+        # compressed_md will be a dict representation of the input metadata,
+        # where each value is a list of length num_cols (with recurring values
+        # replaced as above).
         compressed_md = {}
         c = 0
         r = 0
@@ -247,7 +250,7 @@ def compress_recurring_md_vals(str_metadata_df, output_type="list"):
     else:
         raise ValueError('Unrecognized output_type; must be "list" or "dict"')
 
-    return common_vals, compressed_md
+    return recurring_vals, compressed_md
 
 
 def compress_sample_metadata(s_ids_to_indices, metadata):
@@ -267,20 +270,20 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
 
     Returns
     -------
-    (sm_cols, common_vals, compressed_sm)
+    (sm_cols, recurring_vals, compressed_sm)
         sm_cols: list
             List of the sample metadata column names, all converted to strings.
-        common_vals: list
-            List of "common values" that are used at least twice in the sample
-            metadata, sorted in descending order of frequency in the sample
-            metadata (with ties broken arbitrarily).
+        recurring_vals: list
+            List of "recurring values" that are used at least twice in the
+            sample metadata, sorted in descending order of frequency in the
+            sample metadata (with ties broken arbitrarily).
         compressed_sm: list
             Two-dimensional list. The "outer list" is of length
             len(s_ids_to_indices.keys()). Each position i within this outer
             list holds an "inner list" of length len(sm_cols).
             The c-th value of the i-th inner list contains either:
              -An integer, in which case the value referred to is located at
-              this integer's position in common_vals (using 0-indexing)
+              this integer's position in recurring_vals (using 0-indexing)
              -A string value
             In either case, the value referred to is the sample metadata value
             in column c for the sample with index i.
@@ -327,9 +330,9 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
     sm_cols = [str(c) for c in str_s_i_metadata.columns]
 
     # Compress recurring values and convert the metadata to a 2-D list
-    common_vals, compressed_sm = compress_recurring_md_vals(str_s_i_metadata)
+    recurring_vals, compressed_sm = compress_recurring_md_vals(str_s_i_metadata)
 
-    return sm_cols, common_vals, compressed_sm
+    return sm_cols, recurring_vals, compressed_sm
 
 
 def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
@@ -357,13 +360,13 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
 
     Returns
     -------
-    (fm_cols, common_vals, compressed_tm, compressed_im)
+    (fm_cols, recurring_vals, compressed_tm, compressed_im)
         fm_cols: list
             List of the feature metadata column names, all converted to
             strings. If both input DFs are None, this will be {}.
-        common_vals: list
-            List of "common values" that are used at least twice in either the
-            tip or internal node metadata, sorted in descending order of
+        recurring_vals: list
+            List of "recurring values" that are used at least twice in either
+            the tip or internal node metadata, sorted in descending order of
             frequency in the metadata (with ties broken arbitrarily). (Note
             that these are computed by looking at both metadata DFs
             at once: so if a given value is used once in the tip metadata and
@@ -371,11 +374,11 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
             this list.
         compressed_tm: list
             Two-dimensional list representation of the tip metadata. Along with
-            recurring values being replaced with their position in common_vals,
-            the DF's indices (which were previously tip node names in the tree)
-            will be replaced with each tip's postorder position (based on
-            name2treepos). If tip_metadata was empty, or if both input DFs were
-            None, this will be {}.
+            recurring values being replaced with their position in
+            recurring_vals, the DF's indices (which were previously tip node
+            names in the tree) will be replaced with each tip's postorder
+            position (based on name2treepos). If tip_metadata was empty, or if
+            both input DFs were None, this will be {}.
         compressed_im: list
             Two-dimensional list representation of the internal node metadata.
             Recurring values are replaced as described above for compressed_tm,
@@ -408,7 +411,7 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
     """
     # If the user didn't pass in any feature metadata, we'll get to this block
     if tip_metadata is None and int_metadata is None:
-        return [], {}, {}
+        return [], [], {}, {}
 
     # *This* should never happen. If it did, it's a sign that this function is
     # being misused. (The ^ is a logical XOR; see
@@ -432,12 +435,12 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
     str_tm = tip_metadata.astype(str)
     str_im = int_metadata.astype(str)
 
-    # Combine the tip / internal node metadata so that they can share common
+    # Combine the tip / internal node metadata so that they can share recurring
     # values
     combined_str_fm = pd.concat([str_tm, str_im])
 
     # Compress recurring values
-    common_vals, compressed_fm = compress_recurring_md_vals(
+    recurring_vals, compressed_fm = compress_recurring_md_vals(
         combined_str_fm, output_type="dict"
     )
 
@@ -462,4 +465,4 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
             for pos in treepositions:
                 compressed_im[pos] = compressed_fm[name]
 
-    return fm_cols, common_vals, compressed_tm, compressed_im
+    return fm_cols, recurring_vals, compressed_tm, compressed_im
