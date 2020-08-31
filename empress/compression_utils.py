@@ -432,8 +432,8 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
     if tip_metadata.empty and int_metadata.empty:
         raise ValueError("Both tip & int. node feature metadata are empty.")
 
+    # Make sure that all columns and values are passed to the JS as strings
     fm_cols = [str(c) for c in tip_metadata.columns]
-
     str_tm = tip_metadata.astype(str)
     str_im = int_metadata.astype(str)
 
