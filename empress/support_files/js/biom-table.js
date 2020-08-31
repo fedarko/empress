@@ -31,7 +31,16 @@ define(["underscore", "util"], function (_, util) {
      * @return {BIOMTable}
      * constructs BIOMTable
      */
-    function BIOMTable(sIDs, fIDs, sID2Idx, fID2Idx, tbl, smCols, smRecVals, sm) {
+    function BIOMTable(
+        sIDs,
+        fIDs,
+        sID2Idx,
+        fID2Idx,
+        tbl,
+        smCols,
+        smRecVals,
+        sm
+    ) {
         // Do some basic validation to make sure that the inputs seem ok.
         // This is useful to have in case the python code gets messed up.
         //
