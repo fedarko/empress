@@ -8,6 +8,7 @@
 
 
 from collections import Counter
+import pandas as pd
 
 
 def remove_empty_samples_and_features(table, sample_metadata, ordination=None):
@@ -153,14 +154,16 @@ def compress_table(table):
     )
 
 
-def compress_recurring_md_vals(str_metadata_df):
+def compress_recurring_md_vals(str_metadata_df, output_type="list"):
     """Replaces recurring values in a metadata DF with integers.
 
     Parameters
     ----------
     str_metadata_df: pd.DataFrame
         Sample or feature metadata. Index should describe samples (or
-        features), and columns should be metadata fields.
+        features), and columns should be metadata fields. All of the values in
+        this DataFrame must be stored as strings (even numbers should be stored
+        as strings), so that compressed values can be interpreted correctly.
 
     Returns
     -------
@@ -181,6 +184,7 @@ def compress_recurring_md_vals(str_metadata_df):
             column c for the sample with index i.
     """
     num_cols = len(str_metadata_df.columns)
+    orig_idx = list(str_metadata_df.index)
 
     # Generate a numpy ndarray of all metadata values
     vals_flattened = str_metadata_df.values.flatten()
@@ -208,22 +212,40 @@ def compress_recurring_md_vals(str_metadata_df):
             # we can stop iterating through vals_and_counts.
             break
 
-    # Fill in compressed_md (a 2-D list representation of the input metadata)
-    # with each recurring value replaced with an integer pointing to a position
-    # in common_vals.
-    compressed_md = []
-    c = 0
-    for val in vals_flattened:
-        if c % num_cols == 0:
-            compressed_md.append([])
-        # Add this value (either a number in common_vals or the actual string
-        # value) to the last list in compressed_md, corresponding to the
-        # current sample / feature (depending on what type of metadata this is)
-        if val in val2cvidx:
-            compressed_md[-1].append(val2cvidx[val])
-        else:
-            compressed_md[-1].append(val)
-        c += 1
+    if output_type == "list":
+        # Fill in compressed_md (a 2-D list representation of the input metadata)
+        # with each recurring value replaced with an integer pointing to a position
+        # in common_vals.
+        compressed_md = []
+        c = 0
+        for val in vals_flattened:
+            if c % num_cols == 0:
+                compressed_md.append([])
+            # Add this value (either a number in common_vals or the actual string
+            # value) to the last list in compressed_md, corresponding to the
+            # current sample / feature (depending on what type of metadata this is)
+            if val in val2cvidx:
+                compressed_md[-1].append(val2cvidx[val])
+            else:
+                compressed_md[-1].append(val)
+            c += 1
+    elif output_type == "dict":
+        compressed_md = {}
+        c = 0
+        r = 0
+        curr_feature_name = None
+        for val in vals_flattened:
+            if c % num_cols == 0:
+                compressed_md[orig_idx[r]] = []
+                curr_feature_name = orig_idx[r]
+                r += 1
+            if val in val2cvidx:
+                compressed_md[curr_feature_name].append(val2cvidx[val])
+            else:
+                compressed_md[curr_feature_name].append(val)
+            c += 1
+    else:
+        raise ValueError('Unrecognized output_type; must be "list" or "dict"')
 
     return common_vals, compressed_md
 
@@ -255,7 +277,7 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
         compressed_sm: list
             Two-dimensional list. The "outer list" is of length
             len(s_ids_to_indices.keys()). Each position i within this outer
-            list holds an "inner list" of length len(metadata_columns).
+            list holds an "inner list" of length len(sm_cols).
             The c-th value of the i-th inner list contains either:
              -An integer, in which case the value referred to is located at
               this integer's position in common_vals (using 0-indexing)
@@ -310,13 +332,15 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
     return sm_cols, common_vals, compressed_sm
 
 
-def compress_feature_metadata(tip_metadata, int_metadata):
-    """Converts tip/internal node metadata DataFrames to dicts to save space.
+def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
+    """Converts tip/internal node metadata DataFrames to a space-saving format.
 
-    This is a pretty early optimization -- ideally we would use 2-D lists as
-    our final metadata structure, similar to the table / sample metadata
-    compression. This should be revisited when the tree data node-name
-    revamping has been merged in.
+    Note that the columns of tip_metadata and int_metadata should be identical,
+    even if the feature metadata only describes tip or internal nodes. (In that
+    case, then the other feature metadata parameter should still be a DataFrame
+    -- albeit an empty one, with no feature names in its index.) The only case
+    in which either of the _metadata parameters should be None is if there was
+    no feature metadata at all.
 
     Parameters
     ----------
@@ -326,30 +350,43 @@ def compress_feature_metadata(tip_metadata, int_metadata):
     int_metadata: pd.DataFrame or None
         Metadata for internal nodes. If not None, the index should describe
         node names, and the columns should describe feature metadata fields.
-
-    Note that the columns of tip_metadata and int_metadata should be identical,
-    even if the feature metadata only describes tip or internal nodes. (In that
-    case, then the other feature metadata parameter should still be a DataFrame
-    -- albeit an empty one, with no feature names in its index.) The only case
-    in which the parameters should be None is if there was no feature metadata
-    at all.
+    name2treepos: dict
+        Maps node names to a list of corresponding postorder position(s) in the
+        tree. (Tip names should only map to one position, while internal node
+        names can map to an arbitrarily large number of positions.)
 
     Returns
     -------
-    (metadata_columns, compressed_tip_metadata, compressed_int_metadata)
-        metadata_columns: list
+    (fm_cols, common_vals, compressed_tm, compressed_im)
+        fm_cols: list
             List of the feature metadata column names, all converted to
             strings. If both input DFs are None, this will be {}.
-        compressed_tip_metadata: dict
-            Maps node names in tip_metadata to a list of feature metadata
-            values, in the same order as in metadata_columns and converted to
-            strings. If tip_metadata was empty, or if both input DFs were None,
-            this will be {}.
-        compressed_int_metadata: dict
-            Maps node names in int_metadata to a list of feature metadata
-            values, in the same order as in metadata_columns and converted to
-            strings. If int_metadata was empty, or if both input DFs were None,
-            this will be {}.
+        common_vals: list
+            List of "common values" that are used at least twice in either the
+            tip or internal node metadata, sorted in descending order of
+            frequency in the metadata (with ties broken arbitrarily). (Note
+            that these are computed by looking at both metadata DFs
+            at once: so if a given value is used once in the tip metadata and
+            once in the internal node metadata then it'll still get included in
+            this list.
+        compressed_tm: list
+            Two-dimensional list representation of the tip metadata. Along with
+            recurring values being replaced with their position in common_vals,
+            the DF's indices (which were previously tip node names in the tree)
+            will be replaced with each tip's postorder position (based on
+            name2treepos). If tip_metadata was empty, or if both input DFs were
+            None, this will be {}.
+        compressed_im: list
+            Two-dimensional list representation of the internal node metadata.
+            Recurring values are replaced as described above for compressed_tm,
+            and the DF's indices will similarly be replaced with each internal
+            node's postorder position based on name2treepos. Rows where the
+            index (a.k.a. internal node name) maps to multiple postorder
+            positions in name2treepos will be duplicated, such that each tree
+            position with internal node metadata will have its own row. (This
+            could be made more efficient, but it simplifies things a lot.)
+            If tip_metadata was empty, or if both input DFs were None, this
+            will be {}.
 
     Raises
     ------
@@ -358,6 +395,10 @@ def compress_feature_metadata(tip_metadata, int_metadata):
         - If the columns of tip_metadata are not identical to the columns of
           int_metadata.
         - If both the tip and internal node metadata DataFrames are empty.
+
+    KeyError
+        - If any of the node names (indices) in tip_metadata or int_metadata
+          are not present as keys in name2treepos.
 
     References
     ----------
@@ -385,16 +426,38 @@ def compress_feature_metadata(tip_metadata, int_metadata):
         raise ValueError("Both tip & int. node feature metadata are empty.")
 
     fm_cols = [str(c) for c in tip_metadata.columns]
-    # We want dicts mapping each feature ID to a list of the f.m. values for
-    # this feature ID. Since we're not mapping feature IDs to indices first,
-    # this is pretty simple to do with DataFrame.to_dict() using the
-    # orient="list" option -- however, orient="list" uses column-major order,
-    # so we transpose the metadata DFs before calling to_dict() in order to
-    # make sure our dicts are in row-major order (i.e. feature IDs are keys).
-    #
-    # (Also, while we're at it, we make sure that both DFs' values are all
-    # converted to strings.)
-    compressed_tm = tip_metadata.astype(str).T.to_dict(orient="list")
-    compressed_im = int_metadata.astype(str).T.to_dict(orient="list")
 
-    return fm_cols, compressed_tm, compressed_im
+    str_tm = tip_metadata.astype(str)
+    str_im = int_metadata.astype(str)
+
+    # Combine the tip / internal node metadata so that they can share common
+    # values
+    combined_str_fm = pd.concat([str_tm, str_im])
+
+    # Compress recurring values
+    common_vals, compressed_fm = compress_recurring_md_vals(
+        combined_str_fm, output_type="dict"
+    )
+
+    # Split up the compressed feature metadata back into tip and internal node
+    # metadata. Also, while we're going through the metadata, replace node
+    # names with the corresponding indices in name2treepos, and duplicate
+    # internal node metadata.
+    compressed_tm = {}
+    compressed_im = {}
+    for name in compressed_fm:
+        try:
+            treepositions = name2treepos[name]
+        except KeyError:
+            raise KeyError(
+                "Node name {} is not present in name2treepos.".format(name)
+            )
+        if name in tip_metadata.index:
+            if len(treepositions) > 1:
+                raise ValueError("Tip node name is shared by multiple nodes.")
+            compressed_tm[treepositions[0]] = compressed_fm[name]
+        else:
+            for pos in treepositions:
+                compressed_im[pos] = compressed_fm[name]
+
+    return fm_cols, common_vals, compressed_tm, compressed_im

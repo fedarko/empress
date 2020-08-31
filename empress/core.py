@@ -20,6 +20,7 @@ import pkg_resources
 import os
 import pandas as pd
 
+from collections import defaultdict
 from shutil import copytree
 from emperor import Emperor
 from bp import to_skbio_treenode
@@ -262,23 +263,26 @@ class Empress():
         # integers. (TODO: it should be possible to speed this up by passing
         # the tree to compress_table() so postorder positions can immediately
         # be used as keys / feature IDs without an intermediate step.)
-        s_ids, f_ids, sid2idxs, fid2idxs_t, compressed_table = compress_table(
+        s_ids, f_ids, sid2idxs, fid2idxs_t, cmp_table = compress_table(
             self.table
         )
-        sm_cols, common_sm_vals, compressed_sm = compress_sample_metadata(
+        sm_cols, common_sm_vals, cmp_sm = compress_sample_metadata(
             sid2idxs, self.samples
         )
-        fm_cols, compressed_tm_tmp, compressed_im_tmp = \
-            compress_feature_metadata(self.tip_md, self.int_md)
 
+        # Maps node names to postorder position(s) in the tree. Used for
+        # feature metadata compression.
+        name2treepos = defaultdict(list)
         # Use nodes' postorder positions as their "IDs" for the BIOM table and
         # feature metadata
         fid2idxs = {}
         # bptree indices start at one, hence we pad the arrays
-        compressed_tm = [[]]
-        compressed_im = [[]]
         names = [-1]
         lengths = [-1]
+        # Populate the names and lengths lists, structure the feature data
+        # for the BIOM table (fid2idxs and f_ids) so that tips' postorder
+        # positions are used rather than feature IDs, and update name2treepos
+        # to prepare for feature metadata compression.
         for i, node in enumerate(self.tree.postorder(include_self=True), 1):
             names.append(node.name)
             lengths.append(node.length)
@@ -286,13 +290,11 @@ class Empress():
                 fid2idxs[i] = fid2idxs_t[node.name]
                 f_ids[fid2idxs[i]] = i
 
-            if node.name in compressed_tm_tmp:
-                compressed_tm.append(compressed_tm_tmp[node.name])
-            # Note: for internal metadata, node names may not be unique. Thus,
-            # we duplicate the internal node metadata for each node in the
-            # metadata with the same name.
-            elif node.name in compressed_im_tmp:
-                compressed_im.append(compressed_im_tmp[node.name])
+            name2treepos[node.name].append(i)
+
+        fm_cols, common_fm_vals, cmp_tm, cmp_im = compress_feature_metadata(
+            self.tip_md, self.int_md, name2treepos
+        )
 
         data_to_render = {
             'base_url': self.base_url,
@@ -305,15 +307,16 @@ class Empress():
             'f_ids': f_ids,
             's_ids_to_indices': sid2idxs,
             'f_ids_to_indices': fid2idxs,
-            'compressed_table': compressed_table,
+            'compressed_table': cmp_table,
             # sample metadata
             'sample_metadata_columns': sm_cols,
             'common_sample_metadata_values': common_sm_vals,
-            'compressed_sample_metadata': compressed_sm,
+            'compressed_sample_metadata': cmp_sm,
             # feature metadata
             'feature_metadata_columns': fm_cols,
-            'compressed_tip_metadata': compressed_tm,
-            'compressed_int_metadata': compressed_im,
+            'common_feature_metadata_values': common_fm_vals,
+            'compressed_tip_metadata': cmp_tm,
+            'compressed_int_metadata': cmp_im,
             # Emperor integration
             'emperor_div': '',
             'emperor_require_logic': '',
