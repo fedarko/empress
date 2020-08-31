@@ -194,7 +194,10 @@ define(["underscore", "util"], function (_, util) {
         if (_.isUndefined(row)) {
             return null;
         }
-        return _.map(row, this._uncompressValue);
+        // Our use of .bind(this) lets this._uncompressValue use "this"
+        // properly, even though it's being used as a callback. See
+        // https://thenewstack.io/mastering-javascript-callbacks-bind-apply-call
+        return _.map(row, this._uncompressValue.bind(this));
     };
 
     /**
