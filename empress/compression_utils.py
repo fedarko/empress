@@ -330,7 +330,9 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
     sm_cols = [str(c) for c in str_s_i_metadata.columns]
 
     # Compress recurring values and convert the metadata to a 2-D list
-    recurring_vals, compressed_sm = compress_recurring_md_vals(str_s_i_metadata)
+    recurring_vals, compressed_sm = compress_recurring_md_vals(
+        str_s_i_metadata
+    )
 
     return sm_cols, recurring_vals, compressed_sm
 
