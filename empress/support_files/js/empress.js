@@ -1306,8 +1306,7 @@ define([
     ) {
         var maxX = prevLayerMaxX;
         var colorer = null;
-        var fm2color, colorFMIdx;
-        var fm2length, lengthFMIdx;
+        var fm2color, fm2length;
         // Map feature metadata values to colors, if requested (i.e. if
         // layer.colorByFM is true). If not requested, we'll just use the
         // layer's default color.
@@ -1316,10 +1315,6 @@ define([
                 layer.colorByFMField,
                 "tip"
             ).sortedUniqueValues;
-            // If this field is invalid then an error would have been
-            // raised in this._fmHolder.getUniqueInfo().
-            // (But... it really shouldn't be.)
-            colorFMIdx = this._fmHolder.getColIdx(layer.colorByFMField);
             // We pass the true/false value of the "Continuous values?"
             // checkbox to Colorer regardless of if the selected color map
             // is discrete or sequential/diverging. This is because the Colorer
@@ -1362,7 +1357,6 @@ define([
                 layer.scaleLengthByFMField,
                 "tip"
             ).sortedUniqueValues;
-            lengthFMIdx = this._fmHolder.getColIdx(layer.scaleLengthByFMField);
             try {
                 fm2length = util.assignBarplotLengths(
                     sortedUniqueLengthValues,
@@ -1389,7 +1383,11 @@ define([
                 var color;
                 if (layer.colorByFM) {
                     if (this._fmHolder.hasTipMetadata(node)) {
-                        fm = this._fmHolder.getValue(node, colorFMIdx, "tip");
+                        fm = this._fmHolder.getValue(
+                            node,
+                            layer.colorByFMField,
+                            "tip"
+                        );
                         if (_.has(fm2color, fm)) {
                             color = fm2color[fm];
                         } else {
@@ -1413,7 +1411,11 @@ define([
                 var length;
                 if (layer.scaleLengthByFM) {
                     if (this._fmHolder.hasTipMetadata(node)) {
-                        fm = this._fmHolder.getValue(node, lengthFMIdx, "tip");
+                        fm = this._fmHolder.getValue(
+                            node,
+                            layer.scaleLengthByFMField,
+                            "tip"
+                        );
                         if (_.has(fm2length, fm)) {
                             length = fm2length[fm];
                         } else {

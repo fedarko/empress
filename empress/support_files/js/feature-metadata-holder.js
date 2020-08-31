@@ -33,12 +33,26 @@ define(["underscore", "util"], function (_, util) {
         tipMetadata,
         intMetadata
     ) {
+        var scope = this;
         /**
          * @type{Array}
          * Feature metadata column names.
          * @private
          */
         this._featureMetadataColumns = featureMetadataColumns;
+
+        /**
+         * @type{Object}
+         * Maps each feature metadata column name to its 0-based index in
+         * this._featureMetadataColumns. This is cached in order to make
+         * repeated calls to this.getColIdx() not waste time on recomputing
+         * this information.
+         * @private
+         */
+        this._colName2colIdx = {};
+        _.each(this._featureMetadataColumns, function (colName, colIdx) {
+            scope._colName2colIdx[colName] = colIdx;
+        });
 
         /**
          * @type{Array}
@@ -86,8 +100,8 @@ define(["underscore", "util"], function (_, util) {
      * @throw {Error} If cat is not present in this._featureMetadataColumns.
      */
     FeatureMetadataHolder.prototype.getColIdx = function (cat) {
-        var idx = _.indexOf(this._featureMetadataColumns, cat);
-        if (idx < 0) {
+        var idx = this._colName2colIdx[cat];
+        if (_.isUndefined(idx)) {
             throw new Error(
                 "Feature metadata column " + cat + " not present in data."
             );
@@ -114,10 +128,7 @@ define(["underscore", "util"], function (_, util) {
      * Returns the metadata value of a given node at a given column index.
      *
      * @param {Number} node Postorder position of a node in the tree
-     * @param {Number} colIdx 0-indexed position of a feature metadata column
-     *                        in this._featureMetadataColumns; this should have
-     *                        been computed by this.getColIdx()
-     *                        TODO refactor to use col name
+     * @param {Number} cat Feature metadata column name
      * @param {String} nodeType Should be one of "tip" or "int": "tip"
      *                          indicates that this is a tip node, and "int"
      *                          indicates that this is an internal node
@@ -128,11 +139,8 @@ define(["underscore", "util"], function (_, util) {
      *                column index are not present in the tip or internal node
      *                feature metadata
      */
-    FeatureMetadataHolder.prototype.getValue = function (
-        node,
-        colIdx,
-        nodeType
-    ) {
+    FeatureMetadataHolder.prototype.getValue = function (node, cat, nodeType) {
+        var colIdx = this.getColIdx(cat);
         var initialVal;
         if (nodeType === "tip") {
             initialVal = this._tipMetadata[node][colIdx];
@@ -147,8 +155,8 @@ define(["underscore", "util"], function (_, util) {
             throw new Error(
                 "Node " +
                     node +
-                    " and/or col index " +
-                    colIdx +
+                    " and/or feature metadata column" +
+                    cat +
                     " not in " +
                     nodeType +
                     " feature metadata."
