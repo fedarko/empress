@@ -395,6 +395,8 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
         - If the columns of tip_metadata are not identical to the columns of
           int_metadata.
         - If both the tip and internal node metadata DataFrames are empty.
+        - If any of the node names in tip_metadata maps to multiple node
+          positions in name2treepos.
 
     KeyError
         - If any of the node names (indices) in tip_metadata or int_metadata
