@@ -18,16 +18,20 @@ define(["underscore", "util"], function (_, util) {
      *                   indices of the features present within the sample
      *                   in sIDs at index i.
      * @param{Array} smCols Array of sample metadata column names.
+     * @param{Array} smRecVals Array of recurring values in the sample
+     *                         metadata.
      * @param{Array} sm Two-dimensional array where the outermost layer has the
      *                  same length as sIDs. Each position i within sm contains
      *                  an "inner list" of length smCols.length, and sm[i][c]
      *                  refers to the c-th sample metadata column (in smCols)'s
-     *                  value for the i-th sample (in sIDs).
+     *                  value for the i-th sample (in sIDs): it's either a
+     *                  String, or a Number (corresponding to the value at this
+     *                  index in smRecVals).
      *
      * @return {BIOMTable}
      * constructs BIOMTable
      */
-    function BIOMTable(sIDs, fIDs, sID2Idx, fID2Idx, tbl, smCols, sm) {
+    function BIOMTable(sIDs, fIDs, sID2Idx, fID2Idx, tbl, smCols, smRecVals, sm) {
         // Do some basic validation to make sure that the inputs seem ok.
         // This is useful to have in case the python code gets messed up.
         //
@@ -85,6 +89,7 @@ define(["underscore", "util"], function (_, util) {
         this._fID2Idx = fID2Idx;
         this._tbl = tbl;
         this._smCols = smCols;
+        this._smRecVals = smRecVals;
         this._sm = sm;
     }
 

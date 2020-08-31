@@ -194,7 +194,7 @@ define(["underscore", "util"], function (_, util) {
         if (_.isUndefined(row)) {
             return null;
         }
-        return _.map(row, uncompressValue);
+        return _.map(row, this._uncompressValue);
     };
 
     /**
@@ -202,8 +202,9 @@ define(["underscore", "util"], function (_, util) {
      *
      * If a value occurs more than once in the metadata, it will have
      * been replaced in the metadata with a Number pointing to an index in
-     * this._recurringVals. Since all other values should be stored as Strings
-     * in the metadata, this uses the type of the value to see what to do.
+     * this._recurringValues. Since all other values should be stored as
+     * Strings in the metadata, this uses the type of the value to determine
+     * what to do.
      *
      * @param {String or Number} val A value in the feature metadata.
      *
@@ -215,7 +216,7 @@ define(["underscore", "util"], function (_, util) {
      *                range [0, this._numRecurringValues).
      */
     FeatureMetadataHolder.prototype._uncompressValue = function (val) {
-        if (typeof val === Number) {
+        if (typeof val === "number") {
             if (val >= this._numRecurringValues || val < 0) {
                 throw new Error(
                     "Invalid recurring value compression: numerical " +
@@ -234,7 +235,7 @@ define(["underscore", "util"], function (_, util) {
                         " is not an integer."
                 );
             }
-            return this._recurringVals[val];
+            return this._recurringValues[val];
         }
         return val;
     };
@@ -260,6 +261,7 @@ define(["underscore", "util"], function (_, util) {
      *                   an array of the node name(s) with each value.
      */
     FeatureMetadataHolder.prototype.getUniqueInfo = function (cat, method) {
+        var scope = this;
         // In order to access feature metadata for a given node, we need to
         // find the 0-based index in this._featureMetadataColumns that the
         // specified f.m. column corresponds to.
@@ -283,7 +285,7 @@ define(["underscore", "util"], function (_, util) {
                 // need to convert to integer
                 node = parseInt(node);
                 // This is loosely based on how BIOMTable.getObsBy() works.
-                var fmVal = this._uncompressValue(fmRow[fmIdx]);
+                var fmVal = scope._uncompressValue(fmRow[fmIdx]);
                 if (_.has(uniqueValueToFeatures, fmVal)) {
                     uniqueValueToFeatures[fmVal].push(node);
                 } else {
