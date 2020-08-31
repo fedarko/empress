@@ -118,50 +118,38 @@ define(["underscore", "util"], function (_, util) {
      * have even been provided in the first place. (If this is the case, this
      * function will hide the fmHeader and fmTable elements.)
      *
-     * @param{String} nodeName Name of the node to create this table for.
-     *                         Duplicate names (for internal nodes) are ok.
-     * @param{Array} mdCols Array of metadata columns present in each entry in
-     *                      mdObj. If this is an empty array, this function
-     *                      won't create anything, and will hide the fmHeader
-     *                      and fmTable elements -- see above for details.
-     * @param{Array or null} mdRow Row of feature metadata for the specified
-     *                             node name. If this is null, it's assumed
-     *                             that this node does not have any assigned
-     *                             feature metadata: so no table will be shown.
-     * @param{HTMLElement} fmHeader A reference to a header HTML element to
-     *                              hide / unhide depending on whether or not
-     *                              feature metadata will be shown for this
-     *                              node name.
-     * @param{HTMLElement} fmTable A reference to the <table> element to
-     *                             which this method will insert HTML.
-     *                             This element's innerHTML will be cleared at
-     *                             the start of this method.
+     * @param {Number} node Postorder position of a node in the tree
+     * @param {String} nodeType Should be "tip" or "int", depending on node
      */
-    SelectedNodeMenu.makeFeatureMetadataTable = function (
-        nodeName,
-        mdCols,
-        mdRow,
-        fmHeader,
-        fmTable
+    SelectedNodeMenu.prototype.makeFeatureMetadataTable = function (
+        node,
+        nodeType
     ) {
-        fmTable.innerHTML = "";
-        // If there is feature metadata, and if this node has feature metadata,
-        // then show this information.
-        if (mdCols.length > 0 && !_.isNull(mdRow)) {
-            var headerRow = fmTable.insertRow(-1);
-            var featureRow = fmTable.insertRow(-1);
-            for (var x = 0; x < mdCols.length; x++) {
-                var colName = mdCols[x];
-                var colCell = headerRow.insertCell(-1);
-                colCell.innerHTML = "<strong>" + colName + "</strong>";
-                var dataCell = featureRow.insertCell(-1);
-                dataCell.innerHTML = mdObj[nodeName][x];
+        this.fmTable.innerHTML = "";
+        var noTableAdded = true;
+        var fmCols = this.empress.getFeatureMetadataCategories();
+        if (fmCols.length > 0) {
+            var fmRow = this.empress.getFeatureMetadataRow(node, nodeType);
+            if (!_.isNull(fmRow)) {
+                var headerRow = this.fmTable.insertRow(-1);
+                var featureRow = this.fmTable.insertRow(-1);
+                _.each(fmCols, function (colName, c) {
+                    var colCell = headerRow.insertCell(-1);
+                    colCell.innerHTML = "<strong>" + colName + "</strong>";
+                    var dataCell = featureRow.insertCell(-1);
+                    dataCell.innerText = fmRow[c];
+                });
+                this.fmHeader.classList.remove("hidden");
+                this.fmTable.classList.remove("hidden");
+                noTableAdded = false;
             }
-            fmHeader.classList.remove("hidden");
-            fmTable.classList.remove("hidden");
-        } else {
-            fmHeader.classList.add("hidden");
-            fmTable.classList.add("hidden");
+        }
+        // If noTableAdded is truthy, there is either no feature metadata or
+        // this node doesn't have feature metadata. In either case, don't show
+        // the table.
+        if (noTableAdded) {
+            this.fmHeader.classList.add("hidden");
+            this.fmTable.classList.add("hidden");
         }
     };
 
@@ -229,13 +217,7 @@ define(["underscore", "util"], function (_, util) {
         // 1. Add feature metadata information (if present for this tip; if
         // there isn't feature metadata for this tip, the f.m. UI elements in
         // the selected node menu will be hidden)
-        SelectedNodeMenu.makeFeatureMetadataTable(
-            node,
-            this.empress.getFeatureMetadataCategories(),
-            this.empress.getFeatureMetadataRow(node, "tip"),
-            this.fmHeader,
-            this.fmTable
-        );
+        this.makeFeatureMetadataTable(node, "tip");
 
         // 2. Add sample presence information for this tip
         var ctData = this.empress.computeTipSamplePresence(node, this.fields);
@@ -305,13 +287,7 @@ define(["underscore", "util"], function (_, util) {
         // 1. Add feature metadata information (if present) for this node
         // (Note that we allow duplicate-name internal nodes to have
         // feature metadata; this isn't a problem)
-        SelectedNodeMenu.makeFeatureMetadataTable(
-            this.nodeKeys[0],
-            this.empress.getFeatureMetadataCategories(),
-            this.empress.getFeatureMetadataRow(this.nodeKeys[0], "int"),
-            this.fmHeader,
-            this.fmTable
-        );
+        this.makeFeatureMetadataTable(this.nodeKeys[0], "int");
 
         // 2. Compute sample presence information for this node.
         // (NOTE: this does not prevent "double-counting" samples, so the
