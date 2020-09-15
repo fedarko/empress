@@ -2561,6 +2561,10 @@ define([
         var scope = this;
         var curNode, x, y;
 
+        var rootParent = this._tree.postorder(
+            this._tree.parent(this._tree.postorderselect(rootNode))
+        );
+
         // Note: "left" and "right" most children are different for each layout.
         //       Unrooted:
         //          left  - the left most child
@@ -2587,7 +2591,7 @@ define([
 
             // input is either "left" most or "right" most child
             var addTriangle = function (child) {
-                addPoint(getCoords(rootNode));
+                addPoint(getCoords(rootParent));
                 addPoint(getCoords(cladeInfo.deepest));
                 addPoint(getCoords(child));
             };
@@ -2611,8 +2615,11 @@ define([
             // in value to the root, 3) The ray from the 1) to 2) will refected
             // across the horizontal axis that touches the root of the clade.
 
-            // root of the clade
-            addPoint(getCoords(rootNode));
+            // start point of the clade
+            // We use getX(rootParent) to start the clade at the "starting
+            // point" of the root node, rather than the ending point.
+            addPoint([scope.getX(rootParent), scope.getY(rootNode)]);
+            //addPoint(getCoords(rootNode));
             y = this.getY(rootNode);
 
             // The x coordinate of 2) and 3) will be set to the x-coordinate of
@@ -2679,12 +2686,25 @@ define([
             cladeInfo.sY = sY;
             cladeInfo.totalAngle = totalAngle;
 
+            // Start collapsing at the parent of the root's radius, not the
+            // root's radius.
+            //
+            // First off, figure out where this position is in (x, y)
+            // coordinates -- it's at the root parent's radius, but the root's
+            // angle. Since x = rcos(theta), we can figure out the parent of
+            // the root's radius by dividing the root parent's x by cos(theta).
+            var rootParentRadius = scope.getX(rootParent) /
+                Math.cos(scope.getNodeInfo(rootParent, "angle"));
+            var rootAngle = scope.getNodeInfo(rootNode, "angle");
+            var startPtX = rootParentRadius * Math.cos(rootAngle);
+            var startPtY = rootParentRadius * Math.sin(rootAngle);
+
             // create 15 triangles to approximate sector
             var deltaAngle = totalAngle / 15;
             cos = Math.cos(deltaAngle);
             sin = Math.sin(deltaAngle);
             for (var line = 0; line < 15; line++) {
-                addPoint(getCoords(rootNode));
+                addPoint([startPtX, startPtY]);
 
                 x = sX * cos - sY * sin;
                 y = sX * sin + sY * cos;
