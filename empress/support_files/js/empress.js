@@ -2628,27 +2628,20 @@ define([
             // in value to the root, 3) The ray from the 1) to 2) will refected
             // across the horizontal axis that touches the root of the clade.
 
+            // y-coordinate of 2) and 3)
+            var ly = this.getY(cladeInfo.left);
+            var ry = this.getY(cladeInfo.right);
+
             // start point of the clade
             // We use getX(rootParent) to start the clade at the "starting
             // point" of the root node, rather than the ending point.
-            addPoint([scope.getX(rootParent), scope.getY(rootNode)]);
-            //addPoint(getCoords(rootNode));
-            y = this.getY(rootNode);
+            var midY = (ly + ry) / 2;
+            addPoint([scope.getX(rootParent), midY]);
 
             // The x coordinate of 2) and 3) will be set to the x-coordinate of
             // the "deepest" node.
             var dx = this.getX(cladeInfo.deepest);
 
-            // y-coordinate of 2) and 3)
-            var ly = this.getY(cladeInfo.left);
-            var ry = this.getY(cladeInfo.right);
-            if (this._collapseMethod === "symmetric") {
-                if (Math.abs(y - ly) < Math.abs(y - ry)) {
-                    ry = y + Math.abs(y - ly);
-                } else {
-                    ly = y - Math.abs(y - ry);
-                }
-            }
             addPoint([dx, ly]);
             addPoint([dx, ry]);
         } else {
@@ -2708,9 +2701,15 @@ define([
             // the root's radius by dividing the root parent's x by cos(theta).
             var rootParentRadius = scope.getX(rootParent) /
                 Math.cos(scope.getNodeInfo(rootParent, "angle"));
-            var rootAngle = scope.getNodeInfo(rootNode, "angle");
-            var startPtX = rootParentRadius * Math.cos(rootAngle);
-            var startPtY = rootParentRadius * Math.sin(rootAngle);
+            // We set the center of the wedge to be exactly in the middle of
+            // the leftmost and rightmost child angles, thereby creating
+            // symmetric wedges where both the width and height still have
+            // meaning. (If desired, we could just use the root angle here,
+            // which results in asymmetric wedges but with a smoother
+            // visual "transition" between uncollapsed and collapsed.)
+            var midAngle = (rangle + langle) / 2;
+            var startPtX = rootParentRadius * Math.cos(midAngle);
+            var startPtY = rootParentRadius * Math.sin(midAngle);
 
             // create triangles to approximate sector
             var numSamples = this._numSampToApproximate(totalAngle);
