@@ -1,9 +1,10 @@
-require(["jquery", "UtilitiesForTesting", "util", "chroma"], function (
-    $,
-    UtilitiesForTesting,
-    util,
-    chroma
-) {
+require([
+    "jquery",
+    "UtilitiesForTesting",
+    "util",
+    "chroma",
+    "Empress",
+], function ($, UtilitiesForTesting, util, chroma, Empress) {
     $(document).ready(function () {
         // Setup test variables
         // Note: This is ran for each test() so tests can modify bpArray
@@ -56,8 +57,9 @@ require(["jquery", "UtilitiesForTesting", "util", "chroma"], function (
         });
 
         test("Test getNodeCoords", function () {
-            // Note: node 6's name is null which means it will not be
-            // included in the getNodeCoords()
+            // Note: node 6's name is null, which would indicate that it didn't
+            // have an assigned name in the input Newick file. However, for
+            // #348, we still want to draw a circle for it.
             // prettier-ignore
             var rectCoords = new Float32Array([
                 1, 2, 0.75, 0.75, 0.75,
@@ -65,6 +67,8 @@ require(["jquery", "UtilitiesForTesting", "util", "chroma"], function (
                 5, 6, 0.75, 0.75, 0.75,
                 7, 8, 0.75, 0.75, 0.75,
                 9, 10, 0.75, 0.75, 0.75,
+                // This next row contains coordinate data for node 6
+                11, 12, 0.75, 0.75, 0.75,
                 13, 14, 0.75, 0.75, 0.75,
             ]);
             this.empress._currentLayout = "Rectangular";
@@ -78,6 +82,7 @@ require(["jquery", "UtilitiesForTesting", "util", "chroma"], function (
                 19, 20, 0.75, 0.75, 0.75,
                 21, 22, 0.75, 0.75, 0.75,
                 23, 24, 0.75, 0.75, 0.75,
+                25, 26, 0.75, 0.75, 0.75,
                 27, 28, 0.75, 0.75, 0.75,
             ]);
             this.empress._currentLayout = "Circular";
@@ -91,6 +96,7 @@ require(["jquery", "UtilitiesForTesting", "util", "chroma"], function (
                 33, 34, 0.75, 0.75, 0.75,
                 35, 36, 0.75, 0.75, 0.75,
                 37, 38, 0.75, 0.75, 0.75,
+                39, 40, 0.75, 0.75, 0.75,
                 41, 42, 0.75, 0.75, 0.75,
             ]);
             this.empress._currentLayout = "Unrooted";
@@ -448,6 +454,21 @@ require(["jquery", "UtilitiesForTesting", "util", "chroma"], function (
             var result = this.empress.getSampleCategories();
             result = util.naturalSort(result);
             deepEqual(result, categories);
+
+            // Check getSampleCategories() if no sample metadata passed to
+            // Empress -- an empty array should be returned
+            testData = UtilitiesForTesting.getTestData();
+            var empWithJustFM = new Empress(
+                testData.tree,
+                null,
+                testData.fmCols,
+                testData.tm,
+                testData.im,
+                testData.canvas
+            );
+            // NOTE: for some reason this fails with equal() but succeeds with
+            // deepEqual(). I have no idea why ._.
+            deepEqual(empWithJustFM.getSampleCategories(), []);
         });
 
         test("Test getAvailableLayouts", function () {
@@ -512,46 +533,31 @@ require(["jquery", "UtilitiesForTesting", "util", "chroma"], function (
         });
 
         test("Test centerLayoutAvgPoint", function () {
-            // cache average point for all layouts
+            // Epsilon for approximate equality tests
+            var e = 1.0e-15;
             this.empress._currentLayout = "Rectangular";
-            this.empress.centerLayoutAvgPoint();
-            this.empress._currentLayout = "Circular";
-            this.empress.centerLayoutAvgPoint();
-            this.empress._currentLayout = "Unrooted";
-            this.empress.centerLayoutAvgPoint();
+            var avgPt = this.empress.centerLayoutAvgPoint();
 
             // x coord for rectangular layout
-            ok(
-                Math.abs(this.empress.layoutAvgPoint.Rectangular[0] - 7) <=
-                    1.0e-15
-            );
-            // y coor for rectangular layout
-            ok(
-                Math.abs(this.empress.layoutAvgPoint.Rectangular[1] - 8) <=
-                    1.0e-15
-            );
+            UtilitiesForTesting.approxDeepEqual(avgPt[0], 7, e);
+            // y coord for rectangular layout
+            UtilitiesForTesting.approxDeepEqual(avgPt[1], 8, e);
+
+            this.empress._currentLayout = "Circular";
+            avgPt = this.empress.centerLayoutAvgPoint();
 
             // x coord for circular layout
-            ok(
-                Math.abs(this.empress.layoutAvgPoint.Circular[0] - 21) <=
-                    1.0e-15
-            );
-            // y coor for circular layout
-            ok(
-                Math.abs(this.empress.layoutAvgPoint.Circular[1] - 22) <=
-                    1.0e-15
-            );
+            UtilitiesForTesting.approxDeepEqual(avgPt[0], 21, e);
+            // y coord for circular layout
+            UtilitiesForTesting.approxDeepEqual(avgPt[1], 22, e);
+
+            this.empress._currentLayout = "Unrooted";
+            avgPt = this.empress.centerLayoutAvgPoint();
 
             // x coord for Unrooted layout
-            ok(
-                Math.abs(this.empress.layoutAvgPoint.Unrooted[0] - 35) <=
-                    1.0e-15
-            );
-            // y coor for Unrooted layout
-            ok(
-                Math.abs(this.empress.layoutAvgPoint.Unrooted[1] - 36) <=
-                    1.0e-15
-            );
+            UtilitiesForTesting.approxDeepEqual(avgPt[0], 35, e);
+            // y coord for Unrooted layout
+            UtilitiesForTesting.approxDeepEqual(avgPt[1], 36, e);
         });
 
         test("Test assignGroups", function () {

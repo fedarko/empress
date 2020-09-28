@@ -35,7 +35,6 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
         this.recenterBtn = document.getElementById("center-tree-btn");
         this.focusOnNodeChk = document.getElementById("focus-on-node-chk");
         this.absentTipChk = document.getElementById("absent-tip-chk");
-        this.ignoreLengthsChk = document.getElementById("ignore-lengths-chk");
 
         this.focusOnNodeChk.onclick = function () {
             empress.focusOnSelectedNode = this.checked;
@@ -47,10 +46,6 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
             if (scope.sChk.checked) {
                 scope.sUpdateBtn.click();
             }
-        };
-        this.ignoreLengthsChk.onclick = function () {
-            empress.ignoreLengths = this.checked;
-            empress.reLayout();
         };
 
         // sample GUI components
@@ -79,13 +74,39 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
 
         // layout GUI components
         this.layoutDiv = document.getElementById("layout-div");
+        this.layoutMethodContainer = document.getElementById(
+            "layout-method-container"
+        );
+        this.ignoreLengthsChk = document.getElementById("ignore-lengths-chk");
+        this.leafSortingContainer = document.getElementById(
+            "leaf-sorting-container"
+        );
+        this.leafSortingSel = document.getElementById("leaf-sorting-select");
+        this.leafSortingDesc = document.getElementById("leaf-sorting-desc");
+        this.ignoreLengthsChk.onclick = function () {
+            empress.ignoreLengths = this.checked;
+            empress.reLayout();
+        };
+        this.leafSortingSel.onchange = function () {
+            empress.leafSorting = this.value;
+            empress.reLayout();
+            scope.updateLeafSortingDesc(this.value);
+        };
+        // Initialize the leaf sorting description and disabled status, based
+        // on defaults
+        this.updateLeafSortingDesc(this.leafSortingSel.value);
+        this.updateLeafSortingAvail(this.empress.getDefaultLayout());
 
         // global clade collapse GUI
         this.normalCladeMethod = document.getElementById("normal");
         this.symmetricCladeMethod = document.getElementById("symmetric");
 
         // export GUI components
-        this.exportSVGBtn = document.getElementById("export-btn-svg");
+        this.exportTreeSVGBtn = document.getElementById("export-tree-svg-btn");
+        this.exportTreePNGBtn = document.getElementById("export-tree-png-btn");
+        this.exportLegendSVGBtn = document.getElementById(
+            "export-legend-svg-btn"
+        );
 
         // hides the side menu
         var collapse = document.getElementById(this.COLLAPSE_ID);
@@ -251,11 +272,49 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
     };
 
     /**
-     * Redraws the tree with a different layout.
+     * Updates the description shown below the leaf sorting controls.
+     *
+     * This should be called when the selected leaf sorting method is changed
+     * (and when starting Empress).
      */
-    SidePanel.prototype._updateLayout = function () {
-        this.empress.resetTree();
-        this.empress.drawTree();
+    SidePanel.prototype.updateLeafSortingDesc = function (leafSortingMethod) {
+        var newText;
+        if (leafSortingMethod === "descending") {
+            newText =
+                "Clades are sorted in the tree layout in descending order " +
+                "by the number of descendant tips they contain.";
+        } else if (leafSortingMethod === "ascending") {
+            newText =
+                "Clades are sorted in the tree layout in ascending order " +
+                "by the number of descendant tips they contain.";
+        } else if (leafSortingMethod === "none") {
+            newText =
+                "Clades are not sorted in the tree layout by the number of " +
+                "descendant tips they contain. The ordering should thus " +
+                "match the order of clades in the input tree file.";
+        } else {
+            throw new Error(
+                "Invalid leaf sorting method: " + leafSortingMethod
+            );
+        }
+        // Worded the same as for the symmetric clade collapsing method desc
+        var disclaimerText =
+            " This option only applies to the Rectangular and Circular layouts.";
+        this.leafSortingDesc.textContent = newText + disclaimerText;
+    };
+
+    /**
+     * Hides / shows the leaf sorting controls depending on the current layout.
+     *
+     * This should be called when the current layout is changed
+     * (and when starting Empress).
+     */
+    SidePanel.prototype.updateLeafSortingAvail = function (currLayout) {
+        if (currLayout === "Unrooted") {
+            this.leafSortingContainer.classList.add("hidden");
+        } else {
+            this.leafSortingContainer.classList.remove("hidden");
+        }
     };
 
     /**
@@ -273,6 +332,7 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
 
         var radioBtnOnClickFunc = function () {
             scope.empress.updateLayout(this.value);
+            scope.updateLeafSortingAvail(this.value);
         };
 
         for (var i = 0; i < layouts.length; i++) {
@@ -316,7 +376,7 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
             // Now that we've created these three elements, add them!
             pele.appendChild(lele);
             pele.appendChild(iele);
-            this.layoutDiv.appendChild(pele);
+            this.layoutMethodContainer.appendChild(pele);
         }
     };
 
@@ -327,11 +387,29 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
         // for use in closures
         var scope = this;
 
-        this.exportSVGBtn.onclick = function () {
-            var totalSVG = scope.empress.exportSVG();
-            // Present SVG to user as downloadable file
-            var blob = new Blob([totalSVG], { type: "image/svg+xml" });
-            saveAs(blob, "empress-tree.svg");
+        // Presents SVG to user as a downloadable file
+        var saveSVGBlob = function (svg, filename) {
+            var blob = new Blob([svg], { type: "image/svg+xml" });
+            saveAs(blob, filename);
+        };
+
+        this.exportTreeSVGBtn.onclick = function () {
+            var svg = scope.empress.exportTreeSVG();
+            saveSVGBlob(svg, "empress-tree.svg");
+        };
+        this.exportTreePNGBtn.onclick = function () {
+            var callback = function (blob) {
+                saveAs(blob, "empress-tree.png");
+            };
+            scope.empress.exportTreePNG(callback);
+        };
+        this.exportLegendSVGBtn.onclick = function () {
+            var svg = scope.empress.exportLegendSVG();
+            // If no legends are currently shown, exportLegendSVG() will just
+            // return null -- in which case nothing more needs to be done.
+            if (svg !== null) {
+                saveSVGBlob(svg, "empress-legends.svg");
+            }
         };
     };
 
