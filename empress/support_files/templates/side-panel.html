@@ -292,11 +292,11 @@
   </div>
 </div>
 
-<!-- Tree statistics -->
-<button class="side-header collapsible unpopulated" id="stats-btn">Tree Statistics</button>
+<!-- Statistics -->
+<button class="side-header collapsible unpopulated" id="stats-btn">Statistics</button>
 <div class="side-content control hidden">
   <p class="side-panel-notes">
-    Information about the tree's topology.
+    Information about the visualized data.
   </p>
   <p>
     <table style="margin: 0 auto;">
@@ -331,6 +331,33 @@
           <td></td>
           <td class="header-cell">Average</td>
           <td id="stats-avg-length"></td>
+        </tr>
+      </tbody>
+    </table>
+    <br />
+    <!-- TODO: make the feature table and sample metadata stuff require
+         community data; make the feature metadata stuff require just feature
+         metadata explicitly? Hm, may need more sophisticated classes.
+    -->
+    <table style="margin: 0 auto;">
+      <tbody>
+        <tr>
+          <td class="header-cell" style="text-align: center;" colspan="2">Feature table</td>
+          <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+          <td class="header-cell" style="text-align: center;" colspan="2">Metadata</td>
+        <tr>
+          <td class="header-cell">Samples</td>
+          <td id="stats-sample-count"></td>
+          <td></td>
+          <td class="header-cell">Sample metadata columns</td>
+          <td id="stats-sm-col-count"></td>
+        </tr>
+        <tr>
+          <td class="header-cell">Features</td>
+          <td id="stats-feature-count"></td>
+          <td></td>
+          <td class="header-cell">Feature metadata columns</td>
+          <td id="stats-fm-col-count"></td>
         </tr>
       </tbody>
     </table>

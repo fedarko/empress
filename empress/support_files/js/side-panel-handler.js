@@ -579,6 +579,11 @@ define(["underscore", "Colorer", "util"], function (_, Colorer, util) {
         populateWithFixedPrecision("stats-min-length", stats.min);
         populateWithFixedPrecision("stats-max-length", stats.max);
         populateWithFixedPrecision("stats-avg-length", stats.avg);
+
+        populate("stats-sample-count", this.empress._biom._sIDs.length);
+        populate("stats-feature-count", this.empress._biom._fIDs.length);
+        populate("stats-sm-col-count", this.empress._biom._smCols.length);
+        populate("stats-fm-col-count", this.empress._featureMetadataColumns.length);
     };
 
     return SidePanel;
