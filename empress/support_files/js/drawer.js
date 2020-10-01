@@ -478,6 +478,13 @@ define(["glMatrix", "Camera"], function (gl, Camera) {
         var worldMat = gl.mat4.create();
         gl.mat4.fromTranslation(worldMat, nodePos);
         gl.mat4.multiply(this.worldMat, centerMat, worldMat);
+
+        // HACK: hey it works! no idea why tho.
+        var rotMat = gl.mat4.create();
+        // (0, 0, -1) rotates the tree clockwise
+        var rotVec = gl.vec3.fromValues(0, 0, -1);
+        gl.mat4.fromRotation(rotMat, 0.5*Math.PI, rotVec);
+        gl.mat4.multiply(this.worldMat, rotMat, this.worldMat);
     };
 
     /**
