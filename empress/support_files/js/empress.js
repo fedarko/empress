@@ -313,6 +313,14 @@ define([
         this._collapsedClades = {};
 
         /**
+         * @type(Set)
+         * @private
+         * Clades that should will not be collapse. Currently, clades are only
+         * cleared from this set when resetTree() is called.
+         */
+        this._dontCollapse = new Set();
+
+        /**
          * @type{Array}
          * @private
          *
@@ -2134,6 +2142,7 @@ define([
             this.setNodeInfo(node, "visible", true);
         }
         this._collapsedClades = {};
+        this._dontCollapse = new Set();
         this._collapsedCladeBuffer = [];
         this._drawer.loadThickNodeBuff([]);
         this._drawer.loadCladeBuff([]);
@@ -2422,6 +2431,29 @@ define([
     };
 
     /**
+     * Adds clade to the "do not collapse list"
+     *
+     * @param{Number/String} clade The postorder position of a node (clade).
+     *                             This can either be an integer or a string.
+     */
+    Empress.prototype.dontCollapseClade = function (clade) {
+        var scope = this;
+        var nodes = this.getCladeNodes(parseInt(clade));
+        nodes.forEach(function (node) {
+            scope._dontCollapse.add(node);
+        });
+        this._collapsedClades = {};
+        // Note: currently collapseClades is the only method that set
+        // the node visibility property.
+        for (var i = 1; i <= this._tree.size; i++) {
+            this.setNodeInfo(i, "visible", true);
+        }
+
+        this._collapsedCladeBuffer = [];
+        this.collapseClades();
+        this.drawTree();
+    };
+    /**
      * Collapses all clades that share the same color into a quadrilateral.
      *
      * NOTE: Previously, this checked this._collapsedClades to see if there
@@ -2472,6 +2504,11 @@ define([
         var inorder = this._tree.inOrderNodes();
         for (var node in inorder) {
             node = inorder[node];
+
+            // dont collapse clade
+            if (this._dontCollapse.has(node)) {
+                continue;
+            }
             var visible = this.getNodeInfo(node, "visible");
             var isTip = this._tree.isleaf(this._tree.postorderselect(node));
 
@@ -3114,7 +3151,8 @@ define([
         return samplePresence;
     };
 
-    /** Show the node menu for a node name
+    /**
+     * Show the node menu for a node name
      *
      * @param {String} nodeName The name of the node to show.
      */
@@ -3128,6 +3166,57 @@ define([
 
         this._events.selectedNodeMenu.clearSelectedNode();
         this._events.placeNodeSelectionMenu(nodeName, this.focusOnSelectedNode);
+    };
+
+    /**
+     * Returns an Object describing various tree-level statistics.
+     *
+     * @return {Object} Contains six keys:
+     *                  -min: Minimum non-root node length
+     *                  -max: Maximum non-root node length
+     *                  -avg: Average non-root node length
+     *                  -tipCt: Number of tips in the tree
+     *                  -intCt: Number of internal nodes in the tree (incl.
+     *                          root)
+     *                  -allCt: Number of all nodes in the tree (incl. root)
+     * @throws {Error} If the tree does not have length information, this will
+     *                 be unable to call BPTree.getLengthStats() and will thus
+     *                 fail.
+     */
+    Empress.prototype.getTreeStats = function () {
+        // Compute node counts
+        var allCt = this._tree.size;
+        var tipCt = this._tree.getNumTips(this._tree.size);
+        var intCt = allCt - tipCt;
+        // Get length statistics
+        var lenStats = this._tree.getLengthStats();
+        return {
+            min: lenStats.min,
+            max: lenStats.max,
+            avg: lenStats.avg,
+            tipCt: tipCt,
+            intCt: intCt,
+            allCt: allCt,
+        };
+    };
+
+    /**
+     * Returns the length corresponding to a node key, or null if the node key
+     * corresponds to the root of the tree.
+     *
+     * (The reason for the null thing is that the root node's length is not
+     * currently validated, so we don't want to show whatever the value
+     * there is stored as internally to the user.)
+     *
+     * @param {Number} nodeKey Postorder position of a node in the tree.
+     * @return {Number} The length of the node.
+     */
+    Empress.prototype.getNodeLength = function (nodeKey) {
+        if (nodeKey === this._tree.size) {
+            return null;
+        } else {
+            return this._tree.length(this._tree.postorderselect(nodeKey));
+        }
     };
 
     return Empress;
