@@ -26,15 +26,15 @@ define([
     ExportUtil
 ) {
     /**
-     * @class EmpressTree
+     * @class Empress
      *
      * @param {BPTree} tree The phylogenetic tree.
      * @param {BIOMTable or null} biom The BIOM table used to color the tree.
      *                                 If no table / sample metadata was passed
      *                                 to Empress (i.e. using qiime empress
      *                                 tree-plot), this should be null.
-     * @param {FeatureMetadataHolder} fmHolder Structure that accesses feature
-     *                                         metadata.
+     * @param {FeatureMetadataHolder} fmHolder Structure that holds and
+     *                                         accesses feature metadata.
      * @param {Canvas} canvas The HTML canvas that the tree will be drawn on.
      */
     function Empress(tree, biom, fmHolder, canvas) {

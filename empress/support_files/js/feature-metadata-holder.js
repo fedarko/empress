@@ -14,18 +14,13 @@ define(["underscore", "util"], function (_, util) {
      *                                in the feature metadata (considering both
      *                                the tip and internal node metadata).
      * @param {Object} tipMetadata Feature metadata for tips in the tree.
-     *                             The keys of this Object should be tips'
-     *                             postorder positions in the tree, and the
-     *                             values should be an array of feature
+     *                             The keys of this Object should be tip names,
+     *                             and the values should be an array of feature
      *                             metadata values (of the same length as
      *                             featureMetadataColumns).
      * @param {Object} intMetadata Feature metadata for internal nodes in tree,
-     *                             formatted analogously to tipMetadata. Since
-     *                             this structure (as with tipMetadata) is
-     *                             indexed by nodes' postorder positions in the
-     *                             tree, metadata duplicated across internal
-     *                             nodes with the same name should literally be
-     *                             present multiple times in this structure.
+     *                             formatted analogously to tipMetadata. Note
+     *                             that internal node names can be non-unique.
      */
     function FeatureMetadataHolder(
         featureMetadataColumns,
@@ -71,10 +66,10 @@ define(["underscore", "util"], function (_, util) {
 
         /**
          * @type{Object}
-         * Feature metadata: keys are tree node postorder positions, and
-         * values are arrays of length equal to featureMetadataColumns.length.
-         * To make coloring the tree (in this.getUniqueInfo()) easier, we split
-         * this up into tip and internal node feature metadata objects.
+         * Feature metadata: keys are node names, and values are arrays of
+         * length equal to featureMetadataColumns.length. To make coloring the
+         * tree (in this.getUniqueInfo()) easier, we split this up into tip and
+         * internal node feature metadata objects.
          * @private
          */
         this._tipMetadata = tipMetadata;
