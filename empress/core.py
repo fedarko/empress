@@ -280,7 +280,7 @@ class Empress():
             A dictionary describing the plots contained in the ordination
             object and the sample + feature metadata.
         """
-        s_ids = f_ids = cmp_table = sm_cols = compressed_sm = None
+        s_ids = f_ids = cmp_table = sm_cols = recurring_sm_vals = cmp_sm = None
         sid2idxs = fid2idxs = {}
         if self.is_community_plot:
             # The fid2idxs dict we get from compress_table() is temporary --
@@ -293,19 +293,16 @@ class Empress():
             s_ids, f_ids, sid2idxs, fid2idxs_t, cmp_table = compress_table(
                 self.table
             )
-            sm_cols, recurring_sm_vals, compressed_sm = compress_sample_metadata(
+            sm_cols, recurring_sm_vals, cmp_sm = compress_sample_metadata(
                 sid2idxs, self.samples
             )
-        fm_cols, recurring_fm_vals, compressed_tm_tmp, compressed_im_tmp = \
+        fm_cols, recurring_fm_vals, cmp_tm_tmp, cmp_im_tmp = \
             compress_feature_metadata(self.tip_md, self.int_md)
 
-        # Maps node names to postorder position(s) in the tree. Used for
-        # feature metadata compression.
-        name2treepos = defaultdict(list)
         # Use nodes' postorder positions as their "IDs" for the BIOM table and
         # feature metadata
-        compressed_tm = {}
-        compressed_im = {}
+        cmp_tm = {}
+        cmp_im = {}
         # bptree indices start at one, hence we pad the arrays
         names = [-1]
         lengths = [-1]
@@ -320,14 +317,14 @@ class Empress():
                 fid2idxs[i] = fid2idxs_t[name]
                 f_ids[fid2idxs[i]] = i
 
-            if name in compressed_tm_tmp:
-                compressed_tm[i] = compressed_tm_tmp[name]
+            if name in cmp_tm_tmp:
+                cmp_tm[i] = cmp_tm_tmp[name]
 
             # Note: for internal metadata, node names may not be unique. Thus,
             # we duplicate the internal node metadata for each node in the
             # metadata with the same name.
-            if name in compressed_im_tmp:
-                compressed_im[i] = compressed_im_tmp[name]
+            if name in cmp_im_tmp:
+                cmp_im[i] = cmp_im_tmp[name]
 
         data_to_render = {
             'base_url': self.base_url,

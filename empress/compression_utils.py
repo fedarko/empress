@@ -165,6 +165,28 @@ def compress_recurring_md_vals(str_metadata_df, output_type="list"):
         this DataFrame must be stored as strings (even numbers should be stored
         as strings), so that compressed values can be interpreted correctly.
 
+    output_type: str
+        Should be either "list" or "dict".
+
+            -If it's "list", then the returned compressed_md will be a
+             two-dimensional list of length len(str_metadata_df.index).
+             Each position i within this outer list holds an "inner list"
+             of length len(str_metadata_df.columns). The c-th value of the
+             i-th inner list contains either:
+              -An integer, in which case the value referred to is located at
+               this integer's position in recurring_vals (using 0-indexing)
+              -A string value
+             In either case, the value referred to is the metadata value in
+             column c for the sample with index i.
+
+            -If it's "dict", then the returned compressed_md will be a dict
+             representation of the input metadata. There will be one key in the
+             dict for every value in str_metadata_df.index. Each key maps to a
+             list of length len(str_metadata_df.columns), where recurring
+             values have been replaced as specified above for "list".
+
+            -If it's not "list" or "dict", this will just raise an error.
+
     Returns
     -------
     (recurring_vals, compressed_md)
@@ -172,16 +194,8 @@ def compress_recurring_md_vals(str_metadata_df, output_type="list"):
             List of "recurring values" that are used at least twice in the
             metadata, sorted in descending order of frequency in the metadata
             (with ties broken arbitrarily).
-        compressed_md: list
-            Two-dimensional list. The "outer list" is of length
-            len(str_metadata_df.index). Each position i within this outer
-            list holds an "inner list" of length len(str_metadata_df.columns).
-            The c-th value of the i-th inner list contains either:
-             -An integer, in which case the value referred to is located at
-              this integer's position in recurring_vals (using 0-indexing)
-             -A string value
-            In either case, the value referred to is the metadata value in
-            column c for the sample with index i.
+        compressed_md: list or dict
+            See the output_type description for details on the exact format.
     """
     num_cols = len(str_metadata_df.columns)
     orig_idx = list(str_metadata_df.index)
@@ -337,7 +351,7 @@ def compress_sample_metadata(s_ids_to_indices, metadata):
     return sm_cols, recurring_vals, compressed_sm
 
 
-def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
+def compress_feature_metadata(tip_metadata, int_metadata):
     """Converts tip/internal node metadata DataFrames to a space-saving format.
 
     Note that the columns of tip_metadata and int_metadata should be identical,
@@ -355,43 +369,38 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
     int_metadata: pd.DataFrame or None
         Metadata for internal nodes. If not None, the index should describe
         node names, and the columns should describe feature metadata fields.
-    name2treepos: dict
-        Maps node names to a list of corresponding postorder position(s) in the
-        tree. (Tip names should only map to one position, while internal node
-        names can map to an arbitrarily large number of positions.)
 
     Returns
     -------
     (fm_cols, recurring_vals, compressed_tm, compressed_im)
         fm_cols: list
             List of the feature metadata column names, all converted to
-            strings. If both input DFs are None, this will be {}.
+            strings. If both input DFs are None, this will be [].
         recurring_vals: list
             List of "recurring values" that are used at least twice in either
             the tip or internal node metadata, sorted in descending order of
-            frequency in the metadata (with ties broken arbitrarily). (Note
+            frequency in the metadata (with ties broken arbitrarily). NOTE
             that these are computed by looking at both metadata DFs
             at once: so if a given value is used once in the tip metadata and
             once in the internal node metadata then it'll still get included in
-            this list.
-        compressed_tm: list
-            Two-dimensional list representation of the tip metadata. Along with
-            recurring values being replaced with their position in
-            recurring_vals, the DF's indices (which were previously tip node
-            names in the tree) will be replaced with each tip's postorder
-            position (based on name2treepos). If tip_metadata was empty, or if
-            both input DFs were None, this will be {}.
-        compressed_im: list
-            Two-dimensional list representation of the internal node metadata.
-            Recurring values are replaced as described above for compressed_tm,
-            and the DF's indices will similarly be replaced with each internal
-            node's postorder position based on name2treepos. Rows where the
-            index (a.k.a. internal node name) maps to multiple postorder
-            positions in name2treepos will be duplicated, such that each tree
-            position with internal node metadata will have its own row. (This
-            could be made more efficient, but it simplifies things a lot.)
+            this list. ALSO NOTE that we don't keep track of how many times a
+            duplicate internal node name occurs -- so if a given value only
+            occurs once in a given internal node name's feature metadata, but
+            1,000 internal nodes share that name, we still won't consider that
+            value recurring (at least for now).
+        compressed_tm: dict
+            Maps node names in tip_metadata to a list of feature metadata
+            values, in the same order as in fm_cols and converted to strings.
+            Each recurring value (i.e. a value present in two or more locations
+            throughout the tip / internal node metadata) will be replaced with
+            an integer pointing to the index of this value in recurring_vals.
             If tip_metadata was empty, or if both input DFs were None, this
             will be {}.
+        compressed_im: dict
+            Maps node names in tip_metadata to a list of feature metadata
+            values, in the same order as in fm_cols and converted to strings.
+            Recurring values are replaced as for compressed_tm. If int_metadata
+            was empty, or if both input DFs were None, this will be {}.
 
     Raises
     ------
@@ -447,24 +456,13 @@ def compress_feature_metadata(tip_metadata, int_metadata, name2treepos):
     )
 
     # Split up the compressed feature metadata back into tip and internal node
-    # metadata. Also, while we're going through the metadata, replace node
-    # names with the corresponding indices in name2treepos, and duplicate
-    # internal node metadata.
+    # metadata.
     compressed_tm = {}
     compressed_im = {}
     for name in compressed_fm:
-        try:
-            treepositions = name2treepos[name]
-        except KeyError:
-            raise KeyError(
-                "Node name {} is not present in name2treepos.".format(name)
-            )
         if name in tip_metadata.index:
-            if len(treepositions) > 1:
-                raise ValueError("Tip node name is shared by multiple nodes.")
-            compressed_tm[treepositions[0]] = compressed_fm[name]
+            compressed_tm[name] = compressed_fm[name]
         else:
-            for pos in treepositions:
-                compressed_im[pos] = compressed_fm[name]
+            compressed_im[name] = compressed_fm[name]
 
     return fm_cols, recurring_vals, compressed_tm, compressed_im
