@@ -20,7 +20,6 @@ import pkg_resources
 import os
 import pandas as pd
 
-from collections import defaultdict
 from shutil import copytree
 from emperor import Emperor
 from jinja2 import Environment, FileSystemLoader
