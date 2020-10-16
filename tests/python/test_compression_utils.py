@@ -553,8 +553,9 @@ class TestCompressionUtils(unittest.TestCase):
         self.assertEqual(cim, self.exp_cim)
 
     def test_compress_feature_metadata_both_dfs_nones(self):
-        fm_cols, ctm, cim = compress_feature_metadata(None, None)
+        fm_cols, rv, ctm, cim = compress_feature_metadata(None, None)
         self.assertEqual(fm_cols, [])
+        self.assertEqual(rv, [])
         self.assertEqual(ctm, {})
         self.assertEqual(cim, {})
 
