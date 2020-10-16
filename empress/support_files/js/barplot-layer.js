@@ -59,9 +59,17 @@ define([
         this.num = num;
         this.uniqueNum = uniqueNum;
 
-        this.legend = null;
+        this.colorLegend = null;
+        this.lengthLegend = null;
 
         this.fmAvailable = this.fmCols.length > 0;
+        this.smAvailable = this.smCols.length > 0;
+
+        // If neither feature nor sample metadata information are available,
+        // barplots are not possible.
+        if (!this.fmAvailable && !this.smAvailable) {
+            throw new Error("No feature or sample metadata columns available");
+        }
 
         // This should be "fm" if the barplot is for feature metadata; "sm" if
         // the barplot is for sample metadata. (The default is to use feature
@@ -104,7 +112,8 @@ define([
         this.layerDiv = null;
         this.fmDiv = null;
         this.smDiv = null;
-        this.legendDiv = null;
+        this.colorLegendDiv = null;
+        this.lengthLegendDiv = null;
         this.initHTML();
     }
 
@@ -131,14 +140,15 @@ define([
         // Add UI elements for switching between feature and sample metadata
         // barplots for this layer (only if feature metadata is available;
         // otherwise, things will just default to sample metadata barplots.)
-        if (this.fmAvailable) {
+        var fmBtn, smBtn;
+        if (this.fmAvailable && this.smAvailable) {
             var metadataChoiceP = this.layerDiv.appendChild(
                 document.createElement("p")
             );
-            var fmBtn = metadataChoiceP.appendChild(
+            fmBtn = metadataChoiceP.appendChild(
                 document.createElement("button")
             );
-            var smBtn = metadataChoiceP.appendChild(
+            smBtn = metadataChoiceP.appendChild(
                 document.createElement("button")
             );
             fmBtn.innerText = "Feature Metadata";
@@ -149,14 +159,23 @@ define([
             // Since we default to feature metadata barplot layers, we mark the
             // feature metadata button as "selected" (a.k.a. we darken it a bit)
             fmBtn.classList.add("selected-metadata-choice");
+        }
 
-            // We delay calling initFMDiv() (and initSMDiv(), although that
-            // isn't in this block because it doesn't depend on feature
-            // metadata being available) until after we create the
-            // "type switching" choice buttons above. This is so that the
-            // buttons are placed above the FM / SM divs in the page layout.
+        // We delay calling initFMDiv() / initSMDiv() until after we create the
+        // "type switching" choice buttons above. This is so that the
+        // buttons are placed above the FM / SM divs in the page layout.
+        if (this.fmAvailable) {
             this.initFMDiv();
+        }
+        if (this.smAvailable) {
+            this.initSMDiv();
+        }
+        this.initLegendDiv();
 
+        // We don't set the callbacks until fmDiv / smDiv are created, although
+        // I doubt anyone would be able to click on these buttons fast enough
+        // to break things anyway
+        if (this.fmAvailable && this.smAvailable) {
             fmBtn.onclick = function () {
                 if (scope.barplotType !== "fm") {
                     scope.smDiv.classList.add("hidden");
@@ -176,9 +195,6 @@ define([
                 }
             };
         }
-
-        this.initSMDiv();
-        this.initLegendDiv();
         // Add a row of UI elements that supports removing this layer
         var rmP = this.layerDiv.appendChild(document.createElement("p"));
         var rmLbl = rmP.appendChild(document.createElement("label"));
@@ -564,15 +580,23 @@ define([
     };
 
     /**
-     * Initializes a <div> for this barplot layer that'll contain a legend.
+     * Initializes a <div> for this barplot layer that'll contain legends.
      */
     BarplotLayer.prototype.initLegendDiv = function () {
-        this.legendDiv = document.createElement("div");
-        this.legendDiv.classList.add("hidden");
-        this.legendDiv.classList.add("legend");
-        this.legendDiv.classList.add("barplot-layer-legend");
-        this.legend = new Legend(this.legendDiv);
-        this.layerDiv.appendChild(this.legendDiv);
+        this.colorLegendDiv = document.createElement("div");
+        this.colorLegendDiv.classList.add("hidden");
+        this.colorLegendDiv.classList.add("legend");
+        this.colorLegendDiv.classList.add("barplot-layer-legend");
+        this.colorLegend = new Legend(this.colorLegendDiv);
+        this.layerDiv.appendChild(this.colorLegendDiv);
+
+        this.lengthLegendDiv = document.createElement("div");
+        this.lengthLegendDiv.classList.add("hidden");
+        this.lengthLegendDiv.classList.add("legend");
+        this.lengthLegendDiv.classList.add("barplot-layer-legend");
+        this.lengthLegend = new Legend(this.lengthLegendDiv);
+        this.layerDiv.appendChild(this.lengthLegendDiv);
+
         // TODO: if possible, making the legend text selectable (overriding
         // the unselectable-text class on the side panel) would be nice, so
         // users can do things like highlight and copy category names.
@@ -592,7 +616,7 @@ define([
      * @param {Colorer} colorer Instance of a Colorer object defining the
      *                          current color selection for this barplot.
      */
-    BarplotLayer.prototype.populateLegend = function (colorer) {
+    BarplotLayer.prototype.populateColorLegend = function (colorer) {
         var isFM = this.barplotType === "fm";
         var title;
         if (isFM) {
@@ -608,28 +632,70 @@ define([
             !this.colorByFMColorMapDiscrete
         ) {
             var gradInfo = colorer.getGradientSVG();
-            this.legend.addContinuousKey(title, gradInfo[0], gradInfo[1]);
+            this.colorLegend.addContinuousKey(title, gradInfo[0], gradInfo[1]);
         } else {
-            this.legend.addCategoricalKey(title, colorer.getMapHex());
+            this.colorLegend.addCategoricalKey(title, colorer.getMapHex());
         }
     };
 
     /**
-     * Clears this layer's legend.
+     * Clears this layer's color legend.
      *
      * This is used when no color encoding is used for this layer -- this can
      * happen when the layer is for feature metadata, but the "Color by..."
      * checkbox is unchecked.
      *
      * NOTE that this is called even if the legend is already "cleared" --
-     * either this or populateLegend() is called once for every layer every
-     * time the barplots are redrawn. It'd be possible to try to save the state
-     * of the legend to avoid re-clearing / populating it, but I really doubt
-     * that this will be a bottleneck (unless there are, like, 1000 barplot
-     * layers at once).
+     * either this or populateColorLegend() is called once for every layer
+     * every time the barplots are redrawn. It'd be possible to try to save the
+     * state of the legend to avoid re-clearing / populating it, but I really
+     * doubt that this will be a bottleneck (unless there are, like, 1000
+     * barplot layers at once).
      */
-    BarplotLayer.prototype.clearLegend = function () {
-        this.legend.clear();
+    BarplotLayer.prototype.clearColorLegend = function () {
+        this.colorLegend.clear();
+    };
+
+    /**
+     * Populates the legend with information about the current length scaling
+     * in use.
+     *
+     * The circumstances in which this function is called are similar to those
+     * of populateColorLegend().
+     *
+     * @param {Number} minVal Minimum numeric value of the field used for
+     *                        length scaling.
+     * @param {Number} maxVal Maximum numeric value of the field used for
+     *                        length scaling.
+     * @throws {Error} If the current barplotType is not "fm". (Length scaling
+     *                 isn't supported for sample metadata barplots yet.)
+     */
+    BarplotLayer.prototype.populateLengthLegend = function (minVal, maxVal) {
+        var title;
+        if (this.barplotType === "fm") {
+            title = this.scaleLengthByFMField;
+            this.lengthLegend.addLengthKey(title, minVal, maxVal);
+        } else {
+            throw new Error(
+                "Length encoding is not supported for sample metadata " +
+                    "barplots yet."
+            );
+        }
+    };
+
+    /**
+     * Clears this layer's length legend.
+     *
+     * This is used when no length scaling is used for this layer -- this will
+     * (currently) always be the case for a sample metadata barplot layer.
+     *
+     * The circumstances in which this function is called are similar to those
+     * of clearColorLegend() (so, for example, this is called for each layer
+     * every time the barplots are updated; it's an inefficiency, but probably
+     * not a large one).
+     */
+    BarplotLayer.prototype.clearLengthLegend = function () {
+        this.lengthLegend.clear();
     };
 
     /**
