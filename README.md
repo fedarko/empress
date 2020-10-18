@@ -46,6 +46,59 @@ qiime empress --help
 
 If you see information about Empress' QIIME 2 plugin, the installation was successful!
 
+# Quick start: visualizing a tree using Empress
+
+## Using Empress in QIIME 2
+
+All of these commands will generate QZV files containing the visualization.
+These files can be viewed at [view.qiime2.org](https://view.qiime2.org/) or
+by using `qiime tools view`.
+
+Case 1: Visualizing a tree with no additional metadata.
+
+```
+qiime empress tree-plot \
+    --i-tree your-tree.qza \
+    --o-visualization viz.qzv
+```
+
+Case 2: Visualizing a tree with metadata about some of the nodes (either tips
+or internal nodes) in the tree. The metadata file should be a tab-delimited
+file where each row (below the first row) describes a node in the tree.
+
+```
+qiime empress tree-plot \
+    --i-tree your-tree.qza \
+    --m-feature-metadata-file your-node-metadata.tsv \
+    --o-visualization viz.qzv
+```
+
+Case 3: Visualizing a tree, and you have community information (a table
+describing the abundances of features [tips in the tree] in samples, as well as
+sample metadata information).
+
+```
+qiime empress community-plot \
+    --i-tree your-tree.qza \
+    --i-feature-table your-table.qza \
+    --m-sample-metadata-file your-sample-metadata.tsv \
+    --m-feature-metadata-file your-node-metadata.tsv \   # Optional
+    --o-visualization viz.qzv
+```
+
+Case 4: Visualizing a tree and community information in an Empire plot (i.e.
+with both a tree and ordination shown side-by-side).
+
+```
+qiime empress community-plot \
+    --i-tree your-tree.qza \
+    --i-feature-table your-table.qza \
+    --i-pcoa your-ordination.qza
+    --m-sample-metadata-file your-sample-metadata.tsv \
+    --m-feature-metadata-file your-node-metadata.tsv \   # Optional
+    --o-visualization viz.qzv
+```
+
 # Tutorial: Using Empress in QIIME 2   
 
 In this tutorial, we'll use Empress through QIIME 2 and demonstrate its basic usage with the [Moving Pictures tutorial](https://docs.qiime2.org/2020.8/tutorials/moving-pictures/) dataset. This dataset contains human microbiome samples from
@@ -143,8 +196,18 @@ qiime tools view empress-tree.qzv
 ```
 ![empress_plain](docs/moving-pictures/img/empress_plain.png)
 
-The starting plot is a simple unrooted tree which has all the normal properties of a phylogenetic tree. The outermost “tips” of the tree are also referred to as “leaves”, “terminal nodes”, or “external nodes” and here represent a unique ASV. The line connected to a tip is referred to as a “branch”. A branch connects two or more nodes, or in this case a tip to an internal node. These internal nodes represent a divergent point between nodes and the branch length represents the evolutionary distance between divergence points.
-You can use your mouse’s scroll wheel to zoom in and out, and click and drag anywhere on the plot to move the display to take a closer look at the various tree components. On the top-right we see a display menu with several subcategories that allow us to customize the plot. We will explore these options in more detail below.  
+The starting plot is a simple unrooted tree visualization. The outermost “tips” of the tree could also be referred to as “leaves,” “terminal nodes,” or “external nodes” and here represent a unique ASV. The line connected to a tip is referred to as a “branch”. A branch connects two or more nodes, or in this case a tip to an internal node. These internal nodes represent a divergent point between nodes and the branch length represents the evolutionary distance between divergence points.
+
+__Note that__, by default, `qiime empress community-plot` will shear the
+tree to just the tips present as features in the input table; this doesn't make
+a difference for this dataset since the tree was constructed _from_ the
+features in this dataset (so the tree tips and table features were already
+identical), but this can be worth noting when the tree you're visualizing
+includes more tips than are present in your dataset (for example, if you're
+using an insertion tree). This behavior is configurable using the
+`--p-shear-tree` parameter.
+
+Back to the visualization! You can use your mouse’s scroll wheel to zoom in and out, and click and drag anywhere on the plot to move the display to take a closer look at the various tree components. On the top-right we see a display menu with several subcategories that allow us to customize the plot. We will explore these options in more detail below.  
 
 
 ### Exploring individual features  
