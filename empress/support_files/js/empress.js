@@ -2181,15 +2181,47 @@ define([
      *                        this will use both tip and internal node feature
      *                        metadata. If this is anything else, this will
      *                        throw an error.
-     * @return {Object} An object with two keys:
+     * @param {Number or null} mostFreqN If this is a Number, this function
+     *                                   will limit sortedUniqueValues and
+     *                                   uniqueValueToFeatures to this Number
+     *                                   of "most frequent" unique values in
+     *                                   cat (e.g. if cat is "Phylum" and
+     *                                   mostFreqN is 5, this will only
+     *                                   consider the top 5 most common phyla).
+     *                                   Remaining nodes will be accounted for
+     *                                   in otherValueFeatures.
+     *                                   If this is null, or if this is a
+     *                                   Number and it's greater than or
+     *                                   equal to the number of unique
+     *                                   values in cat, this will have no
+     *                                   effect (all unique values will be
+     *                                   assigned a color, regardless of how
+     *                                   many features have this value).
+     *
+     * @return {Object} An object with three keys:
      *                  -sortedUniqueValues: maps to an Array of the unique
      *                   values in this feature metadata field, sorted using
      *                   util.naturalSort().
      *                  -uniqueValueToFeatures: maps to an Object which maps
      *                   the unique values in this feature metadata column to
      *                   an array of the node name(s) with each value.
+     *                  -otherValueFeatures: maps to an Array of the node
+     *                   name(s) that had feature metadata values in this field
+     *                   besides the ones represented in sortedUniqueValues /
+     *                   uniqueValueToFeatures, if any -- this will be an empty
+     *                   Array unless mostFreqN is a Number (and even then it
+     *                   still might be an empty Array if mostFreqN is larger
+     *                   than the number of unique values in this f.m. field).
+     *
+     * @throws {Error} If any of the following cases are met:
+     *                 -cat is not present in the feature metadata
+     *                 -method is not "tip" or "all"
+     *                 -mostFreqN is not null (so it should be a Number or
+     *                  something that acts like a Number), and it's < 1
      */
-    Empress.prototype.getUniqueFeatureMetadataInfo = function (cat, method) {
+    Empress.prototype.getUniqueFeatureMetadataInfo = function (
+        cat, method, mostFreqN = null
+    ) {
         // In order to access feature metadata for a given node, we need to
         // find the 0-based index in this._featureMetadataColumns that the
         // specified f.m. column corresponds to. (We *could* get around this by
@@ -2211,6 +2243,14 @@ define([
         } else {
             throw 'F. metadata coloring method "' + method + '" unrecognized.';
         }
+
+        var justTopN = !_.isNull(mostFreqN);
+        // Before we actually go through the metadata, let's also validate the
+        // mostFreqN parameter.
+        if (justTopN && mostFreqN < 1) {
+            throw "mostFreqN parameter is < 1. That doesn't make sense?";
+        }
+
         // Produce a mapping of unique values in this feature metadata
         // column to an array of the node name(s) with each value.
         var uniqueValueToFeatures = {};
@@ -2228,13 +2268,70 @@ define([
             });
         });
 
-        var sortedUniqueValues = util.naturalSort(
-            Object.keys(uniqueValueToFeatures)
-        );
-        return {
-            sortedUniqueValues: sortedUniqueValues,
-            uniqueValueToFeatures: uniqueValueToFeatures,
-        };
+        // If we don't care about filtering to the most frequent values (could
+        // be due to mostFreqN being null, or mostFreqN being larger than the
+        // number of unique values in the feature metadata categoriy) we can
+        // skip over this part.
+        if (justTopN && mostFreqN < _.size(uniqueValueToFeatures)) {
+            // Produce a version of uniqueValueToFeatures where each unique
+            // value maps to the number of nodes (features) with this value.
+            var uniqueValueToFrequency = _.mapObject(
+                uniqueValueToFeatures, function (nodes, uniqueValue) {
+                    return nodes.length;
+                }
+            );
+            // Sort the unique values in descending order of frequency.
+            // The use of .sort() to sort an object's keys by its values in
+            // this way was based on https://stackoverflow.com/a/16794116 --
+            // shoutouts to Markus for having one letter off the coolest name.
+            var uniqueValues = _.keys(uniqueValueToFeatures);
+            var mostFreqUniqueValues = uniqueValues.sort(function(v1, v2) {
+                return uniqueValueToFrequency[v2] - uniqueValueToFrequency[v1];
+            });
+            // Now that we have our most frequent feature metadata values, just
+            // take the first (i.e. most frequent) N values from the sorted
+            // array. Note that this breaks ties arbitrarily, although that
+            // could be changed if desired.
+            var mostFreqNUniqueValues = _.first(mostFreqUniqueValues, mostFreqN);
+
+            // Subset uniqueValueToFeatures to the most frequent N unique
+            // values
+            var mostFreqNUniqueValuesToFeatures = _.pick(
+                uniqueValueToFeatures,
+                mostFreqNUniqueValues
+            );
+
+            // Do the opposite of the above -- remove the most frequent N
+            // unique values from uniqueValueToFeatures. Then extract all the
+            // feature names and store them in "otherValueFeatures", which we
+            // return to the caller so that these features can be labelled as
+            // "Other"
+            var otherUniqueValuesToFeatures = _.omit(
+                uniqueValueToFeatures,
+                mostFreqNUniqueValues
+            );
+            var otherValueFeatures = _.flatten(_.values(
+                otherUniqueValuesToFeatures
+            ));
+
+            return {
+                // Note that we don't actually sort these values by name --
+                // instead we leave them in descending order of frequency
+                sortedUniqueValues: mostFreqNUniqueValues,
+                uniqueValueToFeatures: mostFreqNUniqueValuesToFeatures,
+                otherValueFeatures: otherValueFeatures,
+            }
+        } else {
+            var sortedUniqueValues = util.naturalSort(
+                _.keys(uniqueValueToFeatures)
+            );
+            return {
+                sortedUniqueValues: sortedUniqueValues,
+                uniqueValueToFeatures: uniqueValueToFeatures,
+                otherValueFeatures: [],
+            };
+        }
+        throw "How did you even get here?";
     };
 
     /**
