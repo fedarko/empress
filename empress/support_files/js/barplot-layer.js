@@ -91,12 +91,20 @@ define([
         // blue). Shouldn't really impact most users anyway.
         this.initialDefaultColorHex = Colorer.getQIIMEColor(this.num - 1);
         this.defaultColor = Colorer.hex2RGB(this.initialDefaultColorHex);
+
         this.colorByFM = false;
         this.colorByFMField = null;
         this.colorByFMColorMap = null;
         this.colorByFMColorReverse = false;
         this.colorByFMContinuous = false;
         this.colorByFMColorMapDiscrete = true;
+
+        this.colorByFMMostFreq = false;
+        this.colorByFMMostFreqN = BarplotLayer.DEFAULT_MOST_FREQ_VALS;
+        this.colorByFMMostFreqOtherColor = Colorer.hex2RGB(
+            BarplotLayer.DEFAULT_MOST_FREQ_OTHER_COLOR_HEX
+        );
+
         this.defaultLength = BarplotLayer.DEFAULT_LENGTH;
         this.scaleLengthByFM = false;
         this.scaleLengthByFMField = null;
@@ -330,6 +338,87 @@ define([
         reverseColormapCheckbox.classList.add("empress-input");
         reverseColormapLbl.setAttribute("for", reverseColormapCheckbox.id);
 
+        // Add a row for determining whether or not to subset to the most
+        // frequent values in a field
+        var mostFreqP = colorDetailsDiv.appendChild(
+            document.createElement("p")
+        );
+        var mostFreqLbl = mostFreqP.appendChild(
+            document.createElement("label")
+        );
+        mostFreqLbl.innerText =
+            "Only assign unique colors to the most frequent values?";
+        var mostFreqCheckbox = mostFreqP.appendChild(
+            document.createElement("input")
+        );
+        mostFreqCheckbox.id =
+            "barplot-layer-" + this.uniqueNum + "-fmcolor-mostfreq-chk";
+        mostFreqCheckbox.setAttribute("type", "checkbox");
+        mostFreqCheckbox.classList.add("empress-input");
+        mostFreqLbl.setAttribute("for", mostFreqCheckbox.id);
+
+        var mostFreqDetailsDiv = colorDetailsDiv.appendChild(
+            document.createElement("div")
+        );
+        // We apply the indented class to this div to indicate that it is
+        // contingent on the "Only assign unique colors..." checkbox. This
+        // works because the parent div of this div, colorDetailsDiv, already
+        // has the indented class assigned to it; we can apply the class to its
+        // children to further increase indentation.
+        mostFreqDetailsDiv.classList.add("indented");
+        // Hide this stuff by default -- we only want to show it if the user
+        // checks the most frequent checkbox.
+        mostFreqDetailsDiv.classList.add("hidden");
+
+        // Add a row for specifiying the number of most frequent values to
+        // assign unique colors to, if the above checkbox (mostFreqCheckbox) is
+        // checked.
+        var mostFreqNP = mostFreqDetailsDiv.appendChild(
+            document.createElement("p")
+        );
+        var mostFreqNLbl = mostFreqNP.appendChild(
+            document.createElement("label")
+        );
+        mostFreqNLbl.innerText = "Number of most frequent values";
+        var mostFreqNInput = mostFreqNP.appendChild(
+            document.createElement("input")
+        );
+        mostFreqNInput.id =
+            "barplot-layer-" + this.uniqueNum + "-fmcolor-mostfreq-num";
+        mostFreqNInput.setAttribute("type", "number");
+        // TODO? Set max to whatever the number of unique values for the
+        // feature metadata field we're coloring by is. We'd need to
+        // continuously update that, tho, so probably not worth it.
+        mostFreqNInput.setAttribute("min", BarplotLayer.MIN_MOST_FREQ_VALS);
+        mostFreqNInput.value = this.colorByFMMostFreqN;
+        mostFreqNInput.classList.add("empress-input");
+        mostFreqNLbl.setAttribute("for", mostFreqNInput.id);
+
+        // Add "other" color option for the not-in-the-top-N-most-frequent
+        // values
+        var otherColorP = mostFreqDetailsDiv.appendChild(
+            document.createElement("p")
+        );
+        var otherColorLbl = otherColorP.appendChild(
+            document.createElement("label")
+        );
+        otherColorLbl.innerText = '"Other" color';
+        var otherColorInput = document.createElement("input");
+        otherColorInput.setAttribute("type", "text");
+        otherColorInput.id =
+            "barplot-layer-" + this.uniqueNum + "-othercolor-input";
+        otherColorLbl.setAttribute("for", otherColorInput.id);
+        otherColorP.appendChild(otherColorInput);
+        // Register otherColorInput as a color selector with spectrum.js
+        $(otherColorInput).spectrum({
+            color: BarplotLayer.DEFAULT_MOST_FREQ_OTHER_COLOR_HEX,
+            change: function (newColor) {
+                scope.colorByFMMostFreqOtherColor = Colorer.hex2RGB(
+                    newColor.toHexString()
+                );
+            },
+        });
+
         // Add a row for choosing the scale type (i.e. whether to use
         // continuous coloring or not)
         // This mimics Emperor's "Continuous values" checkbox
@@ -401,6 +490,13 @@ define([
         });
         $(reverseColormapCheckbox).change(function () {
             scope.colorByFMColorReverse = reverseColormapCheckbox.checked;
+        });
+        $(mostFreqCheckbox).change(function () {
+            if (mostFreqCheckbox.checked) {
+                mostFreqDetailsDiv.classList.remove("hidden");
+            } else {
+                mostFreqDetailsDiv.classList.add("hidden");
+            }
         });
         $(continuousValCheckbox).change(function () {
             scope.colorByFMContinuous = continuousValCheckbox.checked;
@@ -832,6 +928,31 @@ define([
      * @public
      */
     BarplotLayer.DEFAULT_MAX_LENGTH = 100;
+
+    /**
+     * @type {Number}
+     * The default number of "most frequent values" to limit coloring to, if
+     * "Only assign unique colors to the most frequent values?" is selected.
+     * @public
+     */
+    BarplotLayer.DEFAULT_MOST_FREQ_VALS = 5;
+
+    /**
+     * @type {Number}
+     * The minimum number of "most frequent values" to limit coloring to.
+     * We *could* set this to zero (so that all values would be lumped together
+     * into an "Other" category), but that may be silly.
+     * @public
+     */
+    BarplotLayer.MIN_MOST_FREQ_VALS = 1;
+
+    /**
+     * @type {String}
+     * The default hex color for "other" values (i.e. values that are not in
+     * the top N most frequent for a given field).
+     * @public
+     */
+    BarplotLayer.DEFAULT_MOST_FREQ_OTHER_COLOR_HEX = "#aaaaaa";
 
     return BarplotLayer;
 });
