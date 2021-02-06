@@ -2229,7 +2229,9 @@ define([
      *                  something that acts like a Number), and it's < 1
      */
     Empress.prototype.getUniqueFeatureMetadataInfo = function (
-        cat, method, mostFreqN = null
+        cat,
+        method,
+        mostFreqN = null
     ) {
         // In order to access feature metadata for a given node, we need to
         // find the 0-based index in this._featureMetadataColumns that the
@@ -2285,7 +2287,8 @@ define([
             // Produce a version of uniqueValueToFeatures where each unique
             // value maps to the number of nodes (features) with this value.
             var uniqueValueToFrequency = _.mapObject(
-                uniqueValueToFeatures, function (nodes, uniqueValue) {
+                uniqueValueToFeatures,
+                function (nodes, uniqueValue) {
                     return nodes.length;
                 }
             );
@@ -2294,14 +2297,17 @@ define([
             // this way was based on https://stackoverflow.com/a/16794116 --
             // shoutouts to Markus for having one letter off the coolest name.
             var uniqueValues = _.keys(uniqueValueToFeatures);
-            var mostFreqUniqueValues = uniqueValues.sort(function(v1, v2) {
+            var mostFreqUniqueValues = uniqueValues.sort(function (v1, v2) {
                 return uniqueValueToFrequency[v2] - uniqueValueToFrequency[v1];
             });
             // Now that we have our most frequent feature metadata values, just
             // take the first (i.e. most frequent) N values from the sorted
             // array. Note that this breaks ties arbitrarily, although that
             // could be changed if desired.
-            var mostFreqNUniqueValues = _.first(mostFreqUniqueValues, mostFreqN);
+            var mostFreqNUniqueValues = _.first(
+                mostFreqUniqueValues,
+                mostFreqN
+            );
 
             // Subset uniqueValueToFeatures to the most frequent N unique
             // values
@@ -2319,9 +2325,9 @@ define([
                 uniqueValueToFeatures,
                 mostFreqNUniqueValues
             );
-            var otherValueFeatures = _.flatten(_.values(
-                otherUniqueValuesToFeatures
-            ));
+            var otherValueFeatures = _.flatten(
+                _.values(otherUniqueValuesToFeatures)
+            );
 
             return {
                 // Note that we don't actually sort these values by name --
@@ -2329,7 +2335,7 @@ define([
                 sortedUniqueValues: mostFreqNUniqueValues,
                 uniqueValueToFeatures: mostFreqNUniqueValuesToFeatures,
                 otherValueFeatures: otherValueFeatures,
-            }
+            };
         } else {
             var sortedUniqueValues = util.naturalSort(
                 _.keys(uniqueValueToFeatures)
