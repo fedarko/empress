@@ -1818,10 +1818,19 @@ define([
         // layer.colorByFM is true). If not requested, we'll just use the
         // layer's default color.
         if (layer.colorByFM) {
-            var sortedUniqueColorValues = this.getUniqueFeatureMetadataInfo(
-                layer.colorByFMField,
-                "tip"
-            ).sortedUniqueValues;
+            var sortedUniqueColorValues;
+            if (layer.colorByFMMostFreq) {
+                sortedUniqueColorValues = this.getUniqueFeatureMetadataInfo(
+                    layer.colorByFMField,
+                    "tip",
+                    layer.colorByFMMostFreqN
+                ).sortedUniqueValues;
+            } else {
+                sortedUniqueColorValues = this.getUniqueFeatureMetadataInfo(
+                    layer.colorByFMField,
+                    "tip"
+                ).sortedUniqueValues;
+            }
             // If this field is invalid then an error would have been
             // raised in this.getUniqueFeatureMetadataInfo().
             // (But... it really shouldn't be.)
