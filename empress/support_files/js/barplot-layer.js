@@ -386,13 +386,21 @@ define([
         mostFreqNInput.id =
             "barplot-layer-" + this.uniqueNum + "-fmcolor-mostfreq-num";
         mostFreqNInput.setAttribute("type", "number");
-        // TODO? Set max to whatever the number of unique values for the
-        // feature metadata field we're coloring by is. We'd need to
-        // continuously update that, tho, so probably not worth it.
+        // We could also set a max to whatever the number of unique values
+        // in the feature metadata field we're coloring by is -- however,
+        // we'd need to continuously update that whenever the user changes
+        // that feature metadata field, so I am pretty sure the benefit here
+        // is not worth the effort.
         mostFreqNInput.setAttribute("min", BarplotLayer.MIN_MOST_FREQ_VALS);
-        mostFreqNInput.value = this.colorByFMMostFreqN;
         mostFreqNInput.classList.add("empress-input");
         mostFreqNLbl.setAttribute("for", mostFreqNInput.id);
+        mostFreqNInput.value = this.colorByFMMostFreqN;
+        $(mostFreqNInput).change(function () {
+            scope.colorByFMMostFreqN = util.parseAndValidateNum(
+                mostFreqNInput,
+                BarplotLayer.MIN_MOST_FREQ_VALS
+            );
+        });
 
         // Add "other" color option for the not-in-the-top-N-most-frequent
         // values
@@ -493,8 +501,10 @@ define([
         });
         $(mostFreqCheckbox).change(function () {
             if (mostFreqCheckbox.checked) {
+                scope.colorByFMMostFreq = true;
                 mostFreqDetailsDiv.classList.remove("hidden");
             } else {
+                scope.colorByFMMostFreq = false;
                 mostFreqDetailsDiv.classList.add("hidden");
             }
         });
