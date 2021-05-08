@@ -3,17 +3,19 @@
 [![Standalone CI](https://github.com/biocore/empress/actions/workflows/standalone.yml/badge.svg)](https://github.com/biocore/empress/actions/workflows/standalone.yml)
 [![PyPI](https://img.shields.io/pypi/v/empress.svg)](https://pypi.org/project/empress)
 
-<!---Empress Logo--->
+<!--Empress Logo-->
 
 ## Introduction  
 
-Empress is a fast and scalable [phylogenetic tree](https://en.wikipedia.org/wiki/Phylogenetic_tree) viewer that helps interactively explore the hierarchical relationships between features in a dataset.
+Empress is a fast and scalable [phylogenetic tree](https://en.wikipedia.org/wiki/Phylogenetic_tree) viewer.
 
-While historically these features have often represented evolutionary relationships of species in community surveys, and are characterized by their phylogeny or genetic similarity/differences, you can in fact view any type of information with hierarchical organization. For example, you can view trees of [amplicon sequence variants (ASVs)](https://en.wikipedia.org/wiki/Amplicon_sequence_variant) generated from 16S rRNA marker gene sequencing data, or metabolite trees of LC-MS data using [q2-qemistree](https://github.com/biocore/q2-qemistree) ([ref](https://www.biorxiv.org/content/10.1101/2020.05.04.077636v1)).
+Empress helps users explore the hierarchical relationships between "features" in a dataset. While historically these features have often represented evolutionary relationships of species in community surveys, and are characterized by their phylogeny or genetic similarity/differences, you can in fact view any type of information with hierarchical organization. For example, you can view trees of
+[amplicon sequence variants (ASVs)](https://en.wikipedia.org/wiki/Amplicon_sequence_variant)
+or [operational taxonomic units (OTUs)](https://en.wikipedia.org/wiki/Operational_taxonomic_unit) generated from 16S rRNA marker gene sequencing data, or metabolite trees of LC-MS data generated using [q2-qemistree](https://github.com/biocore/q2-qemistree).
 
-Empress supports categorically new functionality, such as animations and
-integration with ordination plots, as well as functionality common to
-established tree viewers (e.g. metadata coloring, clade collapsing,
+Empress supports categorically new functionality, such as integration and
+synchronized animations with ordination plots, as well as functionality
+common to established tree viewers (e.g. metadata coloring, clade collapsing,
 and barplots).
 
 ### Screenshot
