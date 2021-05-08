@@ -551,9 +551,9 @@ One unique feature that makes Empress useful for exploring time-series data or m
 
 ## Publication and Citation
 
-Empress is available in mSystems
+An open-access publication describing Empress is available in _mSystems_
 [here](https://msystems.asm.org/content/6/2/e01216-20). If you use
-Empress in your work, please cite it! The BibTeX for this paper is:
+Empress in your work, please cite it! The BibTeX for this publication is:
 
 ```
 @article {CantrellFedarko2021empress,
