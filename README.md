@@ -9,9 +9,10 @@
 
 Empress is a fast and scalable [phylogenetic tree](https://en.wikipedia.org/wiki/Phylogenetic_tree) viewer.
 
-Empress helps users explore the hierarchical relationships between "features" in a dataset. While historically these features have often represented evolutionary relationships of species in community surveys, and are characterized by their phylogeny or genetic similarity/differences, you can in fact view any type of information with hierarchical organization. For example, you can view trees of
+Empress helps users explore the hierarchical relationships between "features" in a dataset. Any type of "feature" can be viewed in this way.
+One of the most common use cases is viewing trees of
 [amplicon sequence variants (ASVs)](https://en.wikipedia.org/wiki/Amplicon_sequence_variant)
-or [operational taxonomic units (OTUs)](https://en.wikipedia.org/wiki/Operational_taxonomic_unit) generated from 16S rRNA marker gene sequencing data, or metabolite trees of LC-MS data generated using [q2-qemistree](https://github.com/biocore/q2-qemistree).
+or [operational taxonomic units (OTUs)](https://en.wikipedia.org/wiki/Operational_taxonomic_unit) generated from 16S rRNA marker gene sequencing data, but you could also view trees generated from shotgun metagenomics sequencing data, or trees of metabolomics data generated using [q2-qemistree](https://github.com/biocore/q2-qemistree) (just to name a few options).
 
 Empress supports categorically new functionality, such as integration and
 synchronized animations with ordination plots, as well as functionality
