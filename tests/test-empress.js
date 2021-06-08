@@ -57,7 +57,9 @@ require([
             }
         });
 
-        test("Test getNodeCoords", function () {
+        test("Test getNodeCoords all node circles", function () {
+            // have empress draw all node circles
+            this.empress.drawNodeCircles = 1;
             // Note: node 6's name is null, which would indicate that it didn't
             // have an assigned name in the input Newick file. However, for
             // #348, we still want to draw a circle for it.
@@ -102,6 +104,78 @@ require([
             ]);
             this.empress._currentLayout = "Unrooted";
             var empressUnrootCoords = this.empress.getNodeCoords();
+            deepEqual(empressUnrootCoords, unrootCoords);
+        });
+
+        test("Test getNodeCoords only internal node circles", function () {
+            // have empress draw only internal node circles
+            this.empress.drawNodeCircles = 0;
+            // Note: node 6's name is null, which would indicate that it didn't
+            // have an assigned name in the input Newick file. However, for
+            // #348, we still want to draw a circle for it.
+            // prettier-ignore
+            var rectCoords = new Float32Array([
+                7, 8, 3289650,
+                9, 10, 3289650,
+                13, 14, 3289650,
+            ]);
+            this.empress._currentLayout = "Rectangular";
+            var empressRecCoords = this.empress.getNodeCoords();
+            deepEqual(empressRecCoords, rectCoords);
+
+            // prettier-ignore
+            var circCoords = new Float32Array([
+                21, 22, 3289650,
+                23, 24, 3289650,
+                27, 28, 3289650,
+            ]);
+            this.empress._currentLayout = "Circular";
+            var empressCirCoords = this.empress.getNodeCoords();
+            deepEqual(empressCirCoords, circCoords);
+
+            // prettier-ignore
+            var unrootCoords = new Float32Array([
+                35, 36, 3289650,
+                37, 38, 3289650,
+                41, 42, 3289650,
+            ]);
+            this.empress._currentLayout = "Unrooted";
+            var empressUnrootCoords = this.empress.getNodeCoords();
+            deepEqual(empressUnrootCoords, unrootCoords);
+        });
+
+        test("Test getNodeCoords internal node circles w/ 1 descendant", function () {
+            var testObject = UtilitiesForTesting.getTestDataSingleDescendant();
+            // have empress draw internal node circles w/ 1 descendant
+            testObject.empress.drawNodeCircles = 3;
+            // Note: node 6's name is null, which would indicate that it didn't
+            // have an assigned name in the input Newick file. However, for
+            // #348, we still want to draw a circle for it.
+            // prettier-ignore
+            var rectCoords = new Float32Array([
+                3, 4, 3289650, // root  
+                5, 6, 3289650, // internal node
+            ]);
+            testObject.empress._currentLayout = "Rectangular";
+            var empressRecCoords = testObject.empress.getNodeCoords();
+            deepEqual(empressRecCoords, rectCoords);
+
+            // prettier-ignore
+            var circCoords = new Float32Array([
+                3, 4, 3289650, // root  
+                5, 6, 3289650, // internal node
+            ]);
+            testObject.empress._currentLayout = "Circular";
+            var empressCirCoords = testObject.empress.getNodeCoords();
+            deepEqual(empressCirCoords, circCoords);
+
+            // prettier-ignore
+            var unrootCoords = new Float32Array([
+                3, 4, 3289650, // root  
+                5, 6, 3289650, // internal node
+            ]);
+            testObject.empress._currentLayout = "Unrooted";
+            var empressUnrootCoords = testObject.empress.getNodeCoords();
             deepEqual(empressUnrootCoords, unrootCoords);
         });
 
@@ -468,6 +542,7 @@ require([
                 testData.tree,
                 null,
                 testData.fmCols,
+                testData.splitTaxCols,
                 testData.tm,
                 testData.im,
                 testData.canvas
@@ -1019,6 +1094,7 @@ require([
                 testData.tree,
                 tinyBiom,
                 testData.fmCols,
+                testData.splitTaxCols,
                 testData.tm,
                 testData.im,
                 testData.canvas
@@ -1078,6 +1154,90 @@ require([
                     "i'm invalid!"
                 );
             }, /F. metadata coloring method "i'm invalid!" unrecognized./);
+        });
+        test("Test getUniqueFeatureMetadataInfo with ancestor taxonomy propagation (lowest level, just tip metadata)", function () {
+            var stEmp = UtilitiesForTesting.getEmpressForAncestorTaxProp();
+            var info = stEmp.getUniqueFeatureMetadataInfo("f2", "tip");
+            var uniqVals = ["1; 2", "2; 2"];
+            deepEqual(info.sortedUniqueValues, uniqVals);
+            // Check that the uniqueValueToFeatures object looks good
+            deepEqual(
+                new Set(Object.keys(info.uniqueValueToFeatures)),
+                new Set(uniqVals)
+            );
+            // Two tips have the "1; 2" taxonomy, and two tips have the "2; 2"
+            // taxonomy. ... Of course, in practice, these will probably be
+            // fancy strings like "k__Bacteria" or something, so the taxonomy
+            // displayed will look nicer
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["1; 2"]),
+                new Set([2, 3])
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["2; 2"]),
+                new Set([1, 6])
+            );
+        });
+        test("Test getUniqueFeatureMetadataInfo with ancestor taxonomy propagation (highest level, just tip metadata)", function () {
+            var stEmp = UtilitiesForTesting.getEmpressForAncestorTaxProp();
+            var info = stEmp.getUniqueFeatureMetadataInfo("f1", "tip");
+            var uniqVals = ["1", "2"];
+            deepEqual(info.sortedUniqueValues, uniqVals);
+            // Check that the uniqueValueToFeatures object looks good
+            deepEqual(
+                new Set(Object.keys(info.uniqueValueToFeatures)),
+                new Set(uniqVals)
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["1"]),
+                new Set([2, 3])
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["2"]),
+                new Set([1, 6])
+            );
+        });
+        test("Test getUniqueFeatureMetadataInfo with ancestor taxonomy propagation (lowest level, all f. metadata)", function () {
+            var stEmp = UtilitiesForTesting.getEmpressForAncestorTaxProp();
+            var info = stEmp.getUniqueFeatureMetadataInfo("f2", "all");
+            var uniqVals = ["1; 1", "1; 2", "2; 2"];
+            deepEqual(info.sortedUniqueValues, uniqVals);
+            // Check that the uniqueValueToFeatures object looks good
+            deepEqual(
+                new Set(Object.keys(info.uniqueValueToFeatures)),
+                new Set(uniqVals)
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["1; 1"]),
+                new Set([4, 5])
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["1; 2"]),
+                new Set([2, 3])
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["2; 2"]),
+                new Set([1, 6])
+            );
+        });
+        test("Test getUniqueFeatureMetadataInfo with ancestor taxonomy propagation (highest level, all f. metadata)", function () {
+            var stEmp = UtilitiesForTesting.getEmpressForAncestorTaxProp();
+            var info = stEmp.getUniqueFeatureMetadataInfo("f1", "all");
+            var uniqVals = ["1", "2"];
+            deepEqual(info.sortedUniqueValues, uniqVals);
+            // Check that the uniqueValueToFeatures object looks good
+            deepEqual(
+                new Set(Object.keys(info.uniqueValueToFeatures)),
+                new Set(uniqVals)
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["1"]),
+                new Set([2, 3, 4, 5])
+            );
+            deepEqual(
+                new Set(info.uniqueValueToFeatures["2"]),
+                new Set([1, 6])
+            );
         });
         test("Test _getNodeAngleInfo", function () {
             var scope = this;

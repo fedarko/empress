@@ -11,6 +11,7 @@ define([
     "chroma",
     "LayoutsUtil",
     "ExportUtil",
+    "TreeController",
 ], function (
     _,
     Camera,
@@ -23,7 +24,8 @@ define([
     util,
     chroma,
     LayoutsUtil,
-    ExportUtil
+    ExportUtil,
+    TreeController
 ) {
     /**
      * @class EmpressTree
@@ -40,6 +42,13 @@ define([
      *                      when generating an Empress visualization, this
      *                      parameter should be [] (and tipMetadata and
      *                      intMetadata should be {}s).
+     * @param {Array} splitTaxonomyColumns Columns of the feature metadata
+     *                                     corresponding to explicitly
+     *                                     specified levels of a taxonomy, if
+     *                                     available. Should be [] if not
+     *                                     applicable. Every value in this
+     *                                     Array must also be present in
+     *                                     featureMetadataColumns.
      * @param {Object} tipMetadata Feature metadata for tips in the tree.
      *                 Note: This should map tip names to an array of feature
      *                       metadata values. Each array should have the same
@@ -53,6 +62,7 @@ define([
         tree,
         biom,
         featureMetadataColumns,
+        splitTaxonomyColumns,
         tipMetadata,
         intMetadata,
         canvas
@@ -86,7 +96,7 @@ define([
          * The phylogenetic balance parenthesis tree
          * @private
          */
-        this._tree = tree;
+        this._tree = new TreeController(tree);
 
         /**
          * Used to index into _treeData
@@ -167,11 +177,21 @@ define([
         this.isCommunityPlot = !_.isNull(this._biom);
 
         /**
-         * @type{Array}
+         * @type {Array}
          * Feature metadata column names.
          * @private
          */
         this._featureMetadataColumns = featureMetadataColumns;
+
+        /**
+         * @type {Array}
+         * Taxonomy column names. Should be handled specially when coloring
+         * by these, or using them in feature metadata barplots -- see
+         * https://github.com/biocore/empress/issues/473 and
+         * https://github.com/biocore/empress/pull/482 for details/discussion.
+         * @private
+         */
+        this._splitTaxonomyColumns = splitTaxonomyColumns;
 
         /**
          * @type{Object}
@@ -262,8 +282,13 @@ define([
         /**
          * @type{Bool}
          * Whether or not to draw node circles.
+         * Values will range between 0 and 2.
+         * 0 - Show only internal node circles
+         * 1 - Show all node circles
+         * 2 - Do not show node circles
+         * 3 - show nodes with only 1 descendant
          */
-        this.drawNodeCircles = false;
+        this.drawNodeCircles = 3;
 
         /**
          * @type{Bool}
@@ -370,7 +395,9 @@ define([
      * Also updates this._maxDisplacement.
      */
     Empress.prototype.getLayoutInfo = function () {
-        var data, i;
+        var data,
+            i,
+            j = 1;
         // set up length getter
         var branchMethod = this.branchMethod;
         var checkLengthsChange = LayoutsUtil.shouldCheckBranchLengthsChanged(
@@ -378,13 +405,12 @@ define([
         );
         var lengthGetter = LayoutsUtil.getLengthMethod(
             branchMethod,
-            this._tree
+            this._tree.getTree()
         );
-
         // Rectangular
         if (this._currentLayout === "Rectangular") {
             data = LayoutsUtil.rectangularLayout(
-                this._tree,
+                this._tree.getTree(),
                 4020,
                 4020,
                 // since lengths for "ignoreLengths" are set by `lengthGetter`,
@@ -399,21 +425,22 @@ define([
                 checkLengthsChange
             );
             this._yrscf = data.yScalingFactor;
-            for (i = 1; i <= this._tree.size; i++) {
+            for (i of this._tree.postorderTraversal((includeRoot = true))) {
                 // remove old layout information
                 this._treeData[i].length = this._numOfNonLayoutParams;
 
                 // store new layout information
-                this._treeData[i][this._tdToInd.xr] = data.xCoord[i];
-                this._treeData[i][this._tdToInd.yr] = data.yCoord[i];
+                this._treeData[i][this._tdToInd.xr] = data.xCoord[j];
+                this._treeData[i][this._tdToInd.yr] = data.yCoord[j];
                 this._treeData[i][this._tdToInd.highestchildyr] =
-                    data.highestChildYr[i];
+                    data.highestChildYr[j];
                 this._treeData[i][this._tdToInd.lowestchildyr] =
-                    data.lowestChildYr[i];
+                    data.lowestChildYr[j];
+                j += 1;
             }
         } else if (this._currentLayout === "Circular") {
             data = LayoutsUtil.circularLayout(
-                this._tree,
+                this._tree.getTree(),
                 4020,
                 4020,
                 this.leafSorting,
@@ -421,39 +448,41 @@ define([
                 lengthGetter,
                 checkLengthsChange
             );
-            for (i = 1; i <= this._tree.size; i++) {
+            for (i of this._tree.postorderTraversal((includeRoot = true))) {
                 // remove old layout information
                 this._treeData[i].length = this._numOfNonLayoutParams;
 
                 // store new layout information
-                this._treeData[i][this._tdToInd.xc0] = data.x0[i];
-                this._treeData[i][this._tdToInd.yc0] = data.y0[i];
-                this._treeData[i][this._tdToInd.xc1] = data.x1[i];
-                this._treeData[i][this._tdToInd.yc1] = data.y1[i];
-                this._treeData[i][this._tdToInd.angle] = data.angle[i];
-                this._treeData[i][this._tdToInd.arcx0] = data.arcx0[i];
-                this._treeData[i][this._tdToInd.arcy0] = data.arcy0[i];
+                this._treeData[i][this._tdToInd.xc0] = data.x0[j];
+                this._treeData[i][this._tdToInd.yc0] = data.y0[j];
+                this._treeData[i][this._tdToInd.xc1] = data.x1[j];
+                this._treeData[i][this._tdToInd.yc1] = data.y1[j];
+                this._treeData[i][this._tdToInd.angle] = data.angle[j];
+                this._treeData[i][this._tdToInd.arcx0] = data.arcx0[j];
+                this._treeData[i][this._tdToInd.arcy0] = data.arcy0[j];
                 this._treeData[i][this._tdToInd.arcstartangle] =
-                    data.arcStartAngle[i];
+                    data.arcStartAngle[j];
                 this._treeData[i][this._tdToInd.arcendangle] =
-                    data.arcEndAngle[i];
+                    data.arcEndAngle[j];
+                j += 1;
             }
         } else {
             data = LayoutsUtil.unrootedLayout(
-                this._tree,
+                this._tree.getTree(),
                 4020,
                 4020,
                 undefined,
                 lengthGetter,
                 checkLengthsChange
             );
-            for (i = 1; i <= this._tree.size; i++) {
+            for (i of this._tree.postorderTraversal((includeRoot = true))) {
                 // remove old layout information
                 this._treeData[i].length = this._numOfNonLayoutParams;
 
                 // store new layout information
-                this._treeData[i][this._tdToInd.x2] = data.xCoord[i];
-                this._treeData[i][this._tdToInd.y2] = data.yCoord[i];
+                this._treeData[i][this._tdToInd.x2] = data.xCoord[j];
+                this._treeData[i][this._tdToInd.y2] = data.yCoord[j];
+                j += 1;
             }
         }
         this._drawer.loadTreeCoordsBuff(this.getTreeCoords());
@@ -512,12 +541,7 @@ define([
      */
     Empress.prototype.drawTree = function () {
         this._drawer.loadTreeColorBuff(this.getTreeColor());
-        if (this.drawNodeCircles) {
-            this._drawer.loadNodeBuff(this.getNodeCoords());
-        } else {
-            // Clear the node circle buffer to save some memory / space
-            this._drawer.loadNodeBuff([]);
-        }
+        this._drawer.loadNodeBuff(this.getNodeCoords());
         this._drawer.loadCladeBuff(this._collapsedCladeBuffer);
         this._drawer.draw();
     };
@@ -595,7 +619,7 @@ define([
             );
         }
         // iterate through the tree in postorder, skip root
-        for (var node = 1; node < tree.size; node++) {
+        for (var node of this._tree.postorderTraversal()) {
             // name of current node
             // var node = this._treeData[node];
             var parent = tree.postorder(
@@ -724,7 +748,7 @@ define([
             addPoint();
         }
         // iterate through the tree in postorder, skip root
-        for (var node = 1; node < tree.size; node++) {
+        for (var node of this._tree.postorderTraversal()) {
             if (!this.getNodeInfo(node, "visible")) {
                 continue;
             }
@@ -854,9 +878,45 @@ define([
     Empress.prototype.getNodeCoords = function () {
         var tree = this._tree;
         var coords = [];
+        var scope = this;
+        var visible = function (node) {
+            return scope.getNodeInfo(node, "visible");
+        };
+        var comp;
 
-        for (var node = 1; node <= tree.size; node++) {
-            if (!this.getNodeInfo(node, "visible")) {
+        if (this.drawNodeCircles === 0) {
+            // draw internall node circles
+            comp = function (node) {
+                return (
+                    visible(node) && !tree.isleaf(tree.postorderselect(node))
+                );
+            };
+        } else if (this.drawNodeCircles === 1) {
+            // draw all node circles
+            comp = function (node) {
+                return visible(node);
+            };
+        } else if (this.drawNodeCircles === 2) {
+            // hide all node circles
+            comp = function (node) {
+                return false;
+            };
+        } else if (this.drawNodeCircles === 3) {
+            // draw node with 1 descendant
+            comp = function (node) {
+                var treeNode = tree.postorderselect(node);
+                return (
+                    visible(node) &&
+                    !tree.isleaf(treeNode) &&
+                    tree.fchild(treeNode) === tree.lchild(treeNode)
+                );
+            };
+        } else {
+            throw new Error("getNodeCoords() drawNodeCircles is out of range");
+        }
+
+        for (var node of this._tree.postorderTraversal((includeRoot = true))) {
+            if (!comp(node)) {
                 continue;
             }
             // In the past, we only drew circles for nodes with an assigned
@@ -1196,7 +1256,7 @@ define([
             this._addThickVerticalLineCoords(coords, tree.size, lwScaled);
         }
         // iterate through the tree in postorder, skip root
-        for (var node = 1; node < this._tree.size; node++) {
+        for (var node of this._tree.postorderTraversal()) {
             // name of current node
             var parent = tree.postorder(
                 tree.parent(tree.postorderselect(node))
@@ -1412,7 +1472,7 @@ define([
             this._maxDisplacement = null;
             return;
         }
-        for (var node = 1; node < this._tree.size; node++) {
+        for (var node of this._tree.postorderTraversal()) {
             if (this._tree.isleaf(this._tree.postorderselect(node))) {
                 maxD = this[compFunc](node, maxD);
             }
@@ -1909,15 +1969,33 @@ define([
         } else {
             halfAngleRange = Math.PI / this._tree.numleaves();
         }
-        for (node = 1; node < this._tree.size; node++) {
+        // NOTE that, for drawing a barplot layer representing a taxonomy
+        // column, we are essentially doing the work here of "reassembling"
+        // the ancestor taxonomy with the child taxonomy info twice -- once
+        // when we call this.getUniqueFeatureMetadataInfo() above, and again
+        // as we go through this loop and look at each tip (this is done for
+        // each tip by the "retrieval function" mentioned below).
+        //
+        // It would be ideal to use the mapping information returned by
+        // this.getUniqueFeatureMetadataInfo() to avoid having to repeat this
+        // work, although this would likely require restructuring the rest
+        // of this function -- might be too much work for its own good.
+        for (var node of this._tree.postorderTraversal()) {
             if (this._tree.isleaf(this._tree.postorderselect(node))) {
                 var name = this.getNodeInfo(node, "name");
                 var fm;
                 // Assign this tip's bar a color
                 var color;
                 if (layer.colorByFM) {
+                    // Get a function that'll retrieve feature metadata from
+                    // this field for us. As of writing, only does anything
+                    // special for certain taxonomy columns.
+                    var getValFromColorFM = this._getFMValRetrievalFunction(
+                        layer.colorByFMField
+                    );
+
                     if (_.has(this._tipMetadata, node)) {
-                        fm = this._tipMetadata[node][colorFMIdx];
+                        fm = getValFromColorFM(this._tipMetadata[node]);
                         if (_.has(fm2color, fm)) {
                             color = fm2color[fm];
                         } else {
@@ -1940,8 +2018,19 @@ define([
                 // Assign this tip's bar a length
                 var length;
                 if (layer.scaleLengthByFM) {
+                    // Get a function that'll retrieve feature metadata from
+                    // this field for us. As of writing, this currently is
+                    // not especially useful for length scaling, since this
+                    // function only does something special for taxonomy
+                    // columns -- and those shouldn't be numeric. However,
+                    // using this function as the middle-man here ensures
+                    // consistency with how the other uses of feature metadata
+                    // work (in case we define further special cases later on).
+                    var getValFromLengthFM = this._getFMValRetrievalFunction(
+                        layer.scaleLengthByFMField
+                    );
                     if (_.has(this._tipMetadata, node)) {
-                        fm = this._tipMetadata[node][lengthFMIdx];
+                        fm = getValFromLengthFM(this._tipMetadata[node]);
                         if (_.has(fm2length, fm)) {
                             length = fm2length[fm];
                         } else {
@@ -2042,7 +2131,7 @@ define([
         // For the circular layout, how to speed this up is less clear -- I
         // suspect it should be possible using WebGL and some fancy
         // trigonometry somehow, but I'm not sure.
-        for (var node = 1; node < this._tree.size; node++) {
+        for (var node of this._tree.postorderTraversal()) {
             if (this._tree.isleaf(this._tree.postorderselect(node))) {
                 if (this._currentLayout === "Rectangular") {
                     var y = this.getY(node);
@@ -2179,11 +2268,93 @@ define([
     };
 
     /**
+     * Returns a function that retrieves values for a feature metadata column.
+     *
+     * The returned function takes as input an Array specifying a "row" in the
+     * feature metadata (where each value corresponds to a different feature
+     * metadata column: e.g. one very simple row might be
+     * ["Bacteria", "Firmicutes", "1.25"], if the only feature metadata columns
+     * are "Level 1", "Level 2", and "SomeRandomNumber").
+     *
+     * The "basic" case is that the returned function just retrieves a single
+     * value from this row (e.g. if fmCol is "SomeRandomNumber", then the
+     * returned function should retrieve "1.25" from the aforementioned example
+     * row). However, it's possible for the returned function to behave
+     * differently in special cases. As of writing, the only "special case" is
+     * when fmCol is a non-highest-rank taxonomy column EMPress' Python code
+     * produced (e.g. "Level 2" in the example above) -- in this case, the
+     * returned function will retrieve and combine multiple values, producing
+     * a merged taxonomy string down to a given level (e.g.
+     * "Bacteria; Firmicutes").
+     *
+     * @param {String} fmCol Column in the feature metadata.
+     * @return {Function} Takes as input a row of feature metadata (an Array),
+     *                    and retrieves the "value" for fmCol from this row
+     *                    (which may just mean returning a single element from
+     *                    the row, or combining multiple columns' values) --
+     *                    the behavior is dependent on fmCol.
+     * @throws {Error} If fmCol is not present in this._featureMetadataColumns.
+     */
+    Empress.prototype._getFMValRetrievalFunction = function (fmCol) {
+        var getValFromFM;
+        var taxIdx = _.indexOf(this._splitTaxonomyColumns, fmCol);
+        var fmIdx = _.indexOf(this._featureMetadataColumns, fmCol);
+        if (fmIdx < 0) {
+            throw 'Feature metadata column "' + cat + '" not present in data.';
+        }
+        if (taxIdx <= 0) {
+            // If this feature metadata column is not in the "split taxonomy
+            // columns" (i.e. taxIdx is -1), or if this feature metadata column
+            // corresponds to the highest (and therefore first) taxonomy level
+            // (e.g. "Kingdom" -- in this case taxIdx will be 0), then, when
+            // extracting feature metadata from a given row, we can just get
+            // this column's single value in that row.
+            return function (fmRow) {
+                return fmRow[fmIdx];
+            };
+        } else {
+            // If this feature metadata column corresponds to a taxonomy level
+            // below the highest one (e.g. phylum, or class, ...) then we want
+            // to handle it specially -- see #473 on GitHub. We'll do this by
+            // recording all the "indices" of the feature metadata columns
+            // corresponding to the ancestors above this feature metadata
+            // column (and then this column itself). This makes it easier to
+            // identify all the ancestral information for a given taxonomy
+            // entry.
+            var ancestorFMIndices = [];
+            // We can use a basic for loop starting at 0 because
+            // this._splitTaxonomyColumns are in order
+            for (var i = 0; i < taxIdx; i++) {
+                var currTaxCol = this._splitTaxonomyColumns[i];
+                var currTaxColFMIdx = _.indexOf(
+                    this._featureMetadataColumns,
+                    currTaxCol
+                );
+                ancestorFMIndices.push(currTaxColFMIdx);
+            }
+            // We already know the index of the column we end at, so just put
+            // it here at the end manually. (Saving this extra work probably
+            // won't make an appreciable time difference, but it feels nice :)
+            ancestorFMIndices.push(fmIdx);
+            return function (fmRow) {
+                var totalFMVal = "";
+                _.each(ancestorFMIndices, function (ancestorFMIdx, ii) {
+                    // Separate adjacent levels in the resulting f.m. value
+                    // shown: e.g. "k__Bacteria; p__Cyanobacteria"
+                    if (ii > 0) {
+                        totalFMVal += "; ";
+                    }
+                    totalFMVal += fmRow[ancestorFMIdx];
+                });
+                return totalFMVal;
+            };
+        }
+    };
+
+    /**
      * Retrieve unique value information for a feature metadata field.
      *
      * @param {String} cat The feature metadata column to find information for.
-     *                     Must be present in this._featureMetadataColumns or
-     *                     an error will be thrown.
      * @param {String} method Defines what feature metadata to check.
      *                        If this is "tip", then only tip-level feature
      *                        metadata will be used. If this is "all", then
@@ -2262,6 +2433,10 @@ define([
             throw "mostFreqN parameter is < 1. That doesn't make sense?";
         }
 
+        // Define how we're going to extract feature metadata for a given "row"
+        // (i.e. for each entry in the feature metadata).
+        var getValFromFM = this._getFMValRetrievalFunction(cat);
+
         // Produce a mapping of unique values in this feature metadata
         // column to an array of the node name(s) with each value.
         var uniqueValueToFeatures = {};
@@ -2270,7 +2445,7 @@ define([
                 // need to convert to integer
                 node = parseInt(node);
                 // This is loosely based on how BIOMTable.getObsBy() works.
-                var fmVal = fmRow[fmIdx];
+                var fmVal = getValFromFM(fmRow);
                 if (_.has(uniqueValueToFeatures, fmVal)) {
                     uniqueValueToFeatures[fmVal].push(node);
                 } else {
@@ -2452,7 +2627,7 @@ define([
         if (!ignoreAbsentTips) {
             // find "non-represented" tips
             // Note: the following uses postorder traversal
-            for (i = 1; i < tree.size; i++) {
+            for (i of this._tree.postorderTraversal()) {
                 if (tree.isleaf(tree.postorderselect(i))) {
                     var represented = false;
                     for (j = 0; j < categories.length; j++) {
@@ -2472,7 +2647,7 @@ define([
         // root (at index tree.size) in this loop, we iterate over all its
         // descendants; so in the event that all leaves are unique,
         // the root can still get assigned to a group.
-        for (i = 1; i < tree.size; i++) {
+        for (i of this._tree.postorderTraversal()) {
             var node = i;
             var parent = tree.postorder(tree.parent(tree.postorderselect(i)));
 
@@ -2554,6 +2729,20 @@ define([
     };
 
     /**
+     * Set the #legend-main width and height back to their defaults.
+     *
+     * This allows the legend to be resized back to whatever the default
+     * size will be, since manually resizing the legend sets a fixed
+     * width/height value.
+     */
+    Empress.prototype.resizeLegend = function () {
+        // Setting CSS properties to "" causes the default values to be used:
+        // see https://stackoverflow.com/a/21457941.
+        document.getElementById("legend-main").style.width = "";
+        document.getElementById("legend-main").style.height = "";
+    };
+
+    /**
      * Updates the legend based on a categorical color key.
      *
      * This is set up as a public method so that the Animator can update the
@@ -2566,6 +2755,7 @@ define([
      *                         color, expressed in hex format.
      */
     Empress.prototype.updateLegendCategorical = function (name, keyInfo) {
+        this.resizeLegend();
         this._legend.addCategoricalKey(name, keyInfo);
     };
 
@@ -2709,12 +2899,13 @@ define([
     /**
      * Display the tree nodes.
      *
-     * @param{Boolean} showTreeNodes If true, then Empress will draw circles at
-     *                               each node's position.
+     * @param{String} showTreeNodes 0 - draw only internal nodes circles,
+     *                              1 - draw all node circles,
+     *                              2 - hide all node circles,
+     *                              3 - draw node only 1 descendant
      */
     Empress.prototype.setTreeNodeVisibility = function (showTreeNodes) {
-        this.drawNodeCircles = showTreeNodes;
-        this._drawer.setTreeNodeVisibility(showTreeNodes);
+        this.drawNodeCircles = Number(showTreeNodes);
         this.drawTree();
     };
 
@@ -2751,7 +2942,7 @@ define([
         var x = 0,
             y = 0,
             zoomAmount = 0;
-        for (var node = 1; node <= this._tree.size; node++) {
+        for (var node of this._tree.postorderTraversal((includeRoot = true))) {
             // node = this._treeData[node];
             x += this.getX(node);
             y += this.getY(node);
@@ -2842,7 +3033,7 @@ define([
         this._collapsedClades = {};
         // Note: currently collapseClades is the only method that set
         // the node visibility property.
-        for (var i = 1; i <= this._tree.size; i++) {
+        for (var i of this._tree.postorderTraversal((includeRoot = true))) {
             this.setNodeInfo(i, "visible", true);
         }
 
@@ -2882,7 +3073,7 @@ define([
         // was not called. Thus, this loop is used to guarantee that if an
         // internal node belongs to a group then all of its descendants belong
         // to the same group.
-        for (var i = 1; i <= this._tree.size; i++) {
+        for (var i of this._tree.postorderTraversal()) {
             var parent = this._tree.postorder(
                 this._tree.parent(this._tree.postorderselect(i))
             );
@@ -2898,10 +3089,7 @@ define([
         // collaped.
         // Collapsing a clade will set the .visible property of members to
         // false and will then be skipped in the for loop.
-        var inorder = this._tree.inOrderNodes();
-        for (var node in inorder) {
-            node = inorder[node];
-
+        for (var node of this._tree.inOrderTraversal()) {
             // dont collapse clade
             if (this._dontCollapse.has(node)) {
                 continue;

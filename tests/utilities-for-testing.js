@@ -115,6 +115,7 @@ define(["Empress", "BPTree", "BiomTable"], function (
             ["b", "4", "t4"],
         ];
         var featureColumns = ["f1", "f2"];
+        var splitTaxColumns = [];
         var tipMetadata = {
             1: ["2", "2"],
             2: ["1", "2"],
@@ -137,6 +138,7 @@ define(["Empress", "BPTree", "BiomTable"], function (
                 tree,
                 biom,
                 featureColumns,
+                splitTaxColumns,
                 tipMetadata,
                 intMetadata,
                 canvas
@@ -156,9 +158,75 @@ define(["Empress", "BPTree", "BiomTable"], function (
             tdToInd: tdToInd,
             biom: biom,
             fmCols: featureColumns,
+            splitTaxCols: splitTaxColumns,
             tm: tipMetadata,
             im: intMetadata,
             canvas: canvas,
+        };
+    }
+
+    /**
+     * Returns an Empress object created from the test data returned by
+     * getTestData(), with the key distinction that all feature metadata
+     * columns are "declared" as split taxonomy columns.
+     *
+     * Abstracting this is surprisingly useful for testing this functionality
+     * in many different ways -- it lets us avoid re-typing a lot of stuff.
+     *
+     * @return {Empress} testEmpress
+     */
+    function getEmpressForAncestorTaxProp() {
+        // Need to create a new Empress object, since the default test one has no
+        // split taxonomy columns "declared" on initialization
+        var testData = getTestData();
+        return new Empress(
+            testData.tree,
+            null,
+            testData.fmCols,
+            // Let's say that f1 and f2 are both split taxonomy columns -- our
+            // declaration of them in this order means that f1 is the highest
+            // level and f2 is the lowest level
+            testData.fmCols,
+            testData.tm,
+            testData.im,
+            testData.canvas
+        );
+    }
+
+    /**
+     * Returns an Object containing test data that can be used to construct an
+     * instance of Empress.
+     *
+     * This function was cobbled together from the setup code in
+     * test-empress.js. It will likely need to be extended or modified to
+     * support further testing in the future.
+     *
+     * @return {Object} testData
+     */
+    function getTestDataSingleDescendant() {
+        // tree comes from the following newick string
+        // ((1)s)7;
+        var tree = new BPTree(
+            new Uint8Array([1, 1, 1, 0, 0, 0]),
+            // see https://github.com/biocore/empress/issues/311
+            ["", "1", "s", "root"],
+            [0, 1, 2, 3],
+            null
+        );
+
+        var empress = new Empress(tree, null, [], [], [], [], null);
+
+        // see core.py for more details on  the format of treeData
+        var treeData = [
+            0, // this is blank since empress uses 1-based index. This
+            // will be addressed with #223
+            [3289650, false, true, 1, 2, 1, 2],
+            [3289650, false, true, 3, 4, 3, 4],
+            [3289650, false, true, 5, 6, 5, 6],
+        ];
+        empress._treeData = treeData;
+        return {
+            empress: empress,
         };
     }
 
@@ -355,8 +423,10 @@ define(["Empress", "BPTree", "BiomTable"], function (
 
     return {
         getTestData: getTestData,
+        getEmpressForAncestorTaxProp: getEmpressForAncestorTaxProp,
         approxDeepEqual: approxDeepEqual,
         approxDeepEqualMulti: approxDeepEqualMulti,
         getReferenceSVGs: getReferenceSVGs,
+        getTestDataSingleDescendant: getTestDataSingleDescendant,
     };
 });
