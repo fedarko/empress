@@ -347,7 +347,7 @@ define([
             document.createElement("label")
         );
         mostFreqLbl.innerText =
-            "Only assign unique colors to the most frequent values?";
+            "Only assign colors to the most frequent values?";
         var mostFreqCheckbox = mostFreqP.appendChild(
             document.createElement("input")
         );
@@ -361,7 +361,7 @@ define([
             document.createElement("div")
         );
         // We apply the indented class to this div to indicate that it is
-        // contingent on the "Only assign unique colors..." checkbox. This
+        // contingent on the "Only assign colors..." checkbox. This
         // works because the parent div of this div, colorDetailsDiv, already
         // has the indented class assigned to it; we can apply the class to its
         // children to further increase indentation.
@@ -371,7 +371,7 @@ define([
         mostFreqDetailsDiv.classList.add("hidden");
 
         // Add a row for specifiying the number of most frequent values to
-        // assign unique colors to, if the above checkbox (mostFreqCheckbox) is
+        // assign colors to, if the above checkbox (mostFreqCheckbox) is
         // checked.
         var mostFreqNP = mostFreqDetailsDiv.appendChild(
             document.createElement("p")
@@ -942,7 +942,7 @@ define([
     /**
      * @type {Number}
      * The default number of "most frequent values" to limit coloring to, if
-     * "Only assign unique colors to the most frequent values?" is selected.
+     * "Only assign colors to the most frequent values?" is selected.
      * @public
      */
     BarplotLayer.DEFAULT_MOST_FREQ_VALS = 5;
