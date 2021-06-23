@@ -107,8 +107,8 @@ define([
         this.colorBySMField = null;
         this.colorBySMColorMap = null;
         this.colorBySMColorReverse = false;
-        this.scaleLengthByNumSamplesSM = false;
         this.defaultLengthSM = BarplotLayer.DEFAULT_LENGTH;
+        this.scaleLengthByNumSamplesSM = false;
         this.scaleLengthByNumSamplesSMMin = BarplotLayer.DEFAULT_MIN_LENGTH;
         this.scaleLengthByNumSamplesSMMax = BarplotLayer.DEFAULT_MAX_LENGTH;
 
@@ -791,20 +791,15 @@ define([
      *                        length scaling.
      * @param {Number} maxVal Maximum numeric value of the field used for
      *                        length scaling.
-     * @throws {Error} If the current barplotType is not "fm". (Length scaling
-     *                 isn't supported for sample metadata barplots yet.)
      */
     BarplotLayer.prototype.populateLengthLegend = function (minVal, maxVal) {
         var title;
         if (this.barplotType === "fm") {
             title = this.scaleLengthByFMField;
-            this.lengthLegend.addLengthKey(title, minVal, maxVal);
         } else {
-            throw new Error(
-                "Length encoding is not supported for sample metadata " +
-                    "barplots yet."
-            );
+            title = "Number of samples containing a tip";
         }
+        this.lengthLegend.addLengthKey(title, minVal, maxVal);
     };
 
     /**

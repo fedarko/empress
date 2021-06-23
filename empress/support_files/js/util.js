@@ -188,7 +188,7 @@ define(["underscore", "toastr"], function (_, toastr) {
     }
 
     /**
-     * Produces an Object mapping feature metadata values to barplot lengths.
+     * Produces an Object mapping numeric values to barplot lengths.
      *
      * This code was based on ColorViewController.getScaledColors() in Emperor:
      * https://github.com/biocore/emperor/blob/b959aed7ffcb9fa3e4d019c6e93a1af3850564d9/emperor/support_files/js/color-view-controller.js#L398

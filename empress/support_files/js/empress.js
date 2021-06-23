@@ -1700,6 +1700,7 @@ define([
         prevLayerMaxD
     ) {
         var scope = this;
+        var maxD = prevLayerMaxD;
         var sortedUniqueValues = this.getUniqueSampleValues(
             layer.colorBySMField
         );
@@ -1713,7 +1714,27 @@ define([
         var sm2color = colorer.getMapRGB();
         // Do most of the hard work: compute the frequencies for each tip (only
         // the tips present in the BIOM table, that is)
-        var feature2freqs = this._biom.getFrequencyMap(layer.colorBySMField);
+        var freqMapData = this._biom.getFrequencyMap(layer.colorBySMField);
+        var feature2freqs = freqMapData.fID2Freqs;
+        var feature2SampleCt = freqMapData.fID2SampleCt;
+        var minSampleCt = freqMapData.minSampleCt;
+        var maxSampleCt = freqMapData.maxSampleCt;
+
+        if (layer.scaleLengthByNumSamplesSM) {
+            // TODO: use a diff function (albeit still reusing some code)
+            // since we can run into user-imposed problems with lengths, and
+            // since the number of samples list won't be unique (in the case
+            // where all samples have the same # of samples, we should throw an
+            // error and not do scaling I guess? or just bail out from barplots
+            // entirely)
+            [numsamps2length, minnumsamps, maxnumsamps] = util.assignBarplotLengths(
+                _.values(feature2SampleCt),
+                layer.scaleLengthByNumSamplesSMMin,
+                layer.scaleLengthByNumSamplesSMMax,
+                layer.num,
+                "Not a real field lol"
+            );
+        }
 
         // Only bother computing the halfyrscf / halfAngleRange value we need.
         // (this._tree.numleaves() does iterate over the full tree, at least
@@ -1732,8 +1753,6 @@ define([
             halfAngleRange = Math.PI / this._tree.numleaves();
         }
 
-        var layerLength = layer.defaultLengthSM * this._barplotUnit;
-
         // For each tip in the BIOM table...
         // (We implicitly ignore [and don't draw anything for] tips that
         // *aren't* in the BIOM table.)
@@ -1743,6 +1762,16 @@ define([
             // It'll be updated as we iterate through the unique values in this
             // sample metadata field below.
             var prevSectionMaxD = prevLayerMaxD;
+
+            var layerLength;
+            if (layer.scaleLengthByNumSamplesSM) {
+                numsamps = feature2SampleCt[node];
+                layerLength = numsamps2length[numsamps] * scope._barplotUnit;
+            } else {
+                layerLength = layer.defaultLengthSM * scope._barplotUnit;
+            }
+
+            maxD = Math.max(maxD, prevLayerMaxD + layerLength);
 
             // Compute y-coordinate / angle information up front. Doing this
             // here lets us compute this only once per tip (per layer), rather
@@ -1814,18 +1843,11 @@ define([
                 }
             }
         });
-        // The bar lengths are identical for all tips in this layer, so no need
-        // to do anything fancy to compute the maximum displacement. (So the
-        // max displacement is just the initial max displacement plus the
-        // length for each bar in this layer.)
-        //
-        // null is the final element in this list because, as mentioned above,
-        // length-scaling is currently not supported for sample metadata
-        // barplots. The null indicates that no length legend should be drawn
-        // for this layer. When we get around to supporting scaling sample
-        // metadata barplots by length (see issue #353 on GitHub), we'll just
-        // need to replace the null.
-        return [prevLayerMaxD + layerLength, colorer, null];
+        var lenValSpan = null;
+        if (layer.scaleLengthByNumSamplesSM) {
+            lenValSpan = [minSampleCt, maxSampleCt];
+        }
+        return [maxD, colorer, lenValSpan];
     };
 
     /**

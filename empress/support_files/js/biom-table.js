@@ -527,7 +527,7 @@ define(["underscore", "util"], function (_, util) {
         var scope = this;
         var colIdx = this._getSampleMetadataColIndex(col);
         var fIdx2Counts = [];
-        var fIdx2SampleCt = [];
+        var fID2SampleCt = {};
         var containingSampleCount, cVal, cValIdx;
 
         // Find unique (sorted) values in this sample metadata column; map
@@ -551,7 +551,7 @@ define(["underscore", "util"], function (_, util) {
                 emptyCounts.push(0);
             }
             fIdx2Counts.push(emptyCounts);
-            fIdx2SampleCt.push(0);
+            fID2SampleCt[fID] = 0;
         });
 
         // Iterate through each the feature presence data for each sample in
@@ -565,8 +565,19 @@ define(["underscore", "util"], function (_, util) {
             // sample
             _.each(presentFeatureIndices, function (fIdx) {
                 fIdx2Counts[fIdx][cValIdx]++;
-                fIdx2SampleCt[fIdx]++;
+                fID = scope._getFeatureIDFromIndex(fIdx);
+                fID2SampleCt[fID]++;
             });
+        });
+
+        // NOTE: it's probs faster to initialize these while iterating over the
+        // table, but that seems complicated (at least for the minimum?) and
+        // this isn't a bottleneck so let's favor simplicity over speed r/n
+        var minSampleCt = Number.POSITIVE_INFINITY;
+        var maxSampleCt = Number.NEGATIVE_INFINITY;
+        _.each(fID2SampleCt, function (sampleCt) {
+            minSampleCt = Math.min(minSampleCt, sampleCt);
+            maxSampleCt = Math.max(maxSampleCt, sampleCt);
         });
 
         // Convert counts to frequencies
@@ -582,7 +593,7 @@ define(["underscore", "util"], function (_, util) {
         var fID2Freqs = {};
         var totalSampleCount;
         _.each(this._fIDs, function (fID, fIdx) {
-            totalSampleCount = fIdx2SampleCt[fIdx];
+            totalSampleCount = fID2SampleCt[fID];
             fID2Freqs[fID] = {};
             _.each(fIdx2Counts[fIdx], function (count, smValIdx) {
                 if (count > 0) {
@@ -591,7 +602,7 @@ define(["underscore", "util"], function (_, util) {
                 }
             });
         });
-        return fID2Freqs;
+        return { fID2Freqs: fID2Freqs, fID2SampleCt: fID2SampleCt, minSampleCt: minSampleCt, maxSampleCt: maxSampleCt };
     };
 
     return BIOMTable;
