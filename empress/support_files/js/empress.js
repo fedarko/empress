@@ -1727,7 +1727,11 @@ define([
             // where all samples have the same # of samples, we should throw an
             // error and not do scaling I guess? or just bail out from barplots
             // entirely)
-            [numsamps2length, minnumsamps, maxnumsamps] = util.assignBarplotLengths(
+            [
+                numsamps2length,
+                minnumsamps,
+                maxnumsamps,
+            ] = util.assignBarplotLengths(
                 _.values(feature2SampleCt),
                 layer.scaleLengthByNumSamplesSMMin,
                 layer.scaleLengthByNumSamplesSMMax,

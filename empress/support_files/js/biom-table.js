@@ -602,7 +602,12 @@ define(["underscore", "util"], function (_, util) {
                 }
             });
         });
-        return { fID2Freqs: fID2Freqs, fID2SampleCt: fID2SampleCt, minSampleCt: minSampleCt, maxSampleCt: maxSampleCt };
+        return {
+            fID2Freqs: fID2Freqs,
+            fID2SampleCt: fID2SampleCt,
+            minSampleCt: minSampleCt,
+            maxSampleCt: maxSampleCt,
+        };
     };
 
     return BIOMTable;

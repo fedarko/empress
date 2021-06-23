@@ -604,7 +604,8 @@ define([
         var scaleByNumSamplesLbl = scaleByNumSamplesP.appendChild(
             document.createElement("label")
         );
-        scaleByNumSamplesLbl.innerText = "Scale length by number of samples containing a tip?";
+        scaleByNumSamplesLbl.innerText =
+            "Scale length by number of samples containing a tip?";
         var scaleByNumSamplesCheckbox = scaleByNumSamplesP.appendChild(
             document.createElement("input")
         );
