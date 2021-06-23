@@ -1685,10 +1685,7 @@ define([
      *
      * @return {Array} layerInfo An array containing three elements:
      *                           1. The maximum displacement of a bar within
-     *                              this layer (this should really just be
-     *                              prevLayerMaxD + layer.lengthSM, since all
-     *                              tips' bars in a stacked sample metadata
-     *                              barplot have the same length)
+     *                              this layer
      *                           2. The Colorer used to assign colors to sample
      *                              metadata values
      *                           3. Just null (in the future, this could be
@@ -1735,7 +1732,7 @@ define([
             halfAngleRange = Math.PI / this._tree.numleaves();
         }
 
-        var layerLength = layer.lengthSM * this._barplotUnit;
+        var layerLength = layer.defaultLengthSM * this._barplotUnit;
 
         // For each tip in the BIOM table...
         // (We implicitly ignore [and don't draw anything for] tips that
@@ -2042,7 +2039,7 @@ define([
                         continue;
                     }
                 } else {
-                    length = layer.defaultLength;
+                    length = layer.defaultLengthFM;
                 }
 
                 if (length === 0) {

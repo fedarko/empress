@@ -97,7 +97,7 @@ define([
         this.colorByFMColorReverse = false;
         this.colorByFMContinuous = false;
         this.colorByFMColorMapDiscrete = true;
-        this.defaultLength = BarplotLayer.DEFAULT_LENGTH;
+        this.defaultLengthFM = BarplotLayer.DEFAULT_LENGTH;
         this.scaleLengthByFM = false;
         this.scaleLengthByFMField = null;
         this.scaleLengthByFMMin = BarplotLayer.DEFAULT_MIN_LENGTH;
@@ -107,7 +107,10 @@ define([
         this.colorBySMField = null;
         this.colorBySMColorMap = null;
         this.colorBySMColorReverse = false;
-        this.lengthSM = BarplotLayer.DEFAULT_LENGTH;
+        this.scaleLengthByNumSamplesSM = false;
+        this.defaultLengthSM = BarplotLayer.DEFAULT_LENGTH;
+        this.scaleLengthByNumSamplesSMMin = BarplotLayer.DEFAULT_MIN_LENGTH;
+        this.scaleLengthByNumSamplesSMMax = BarplotLayer.DEFAULT_MAX_LENGTH;
 
         // Initialize the HTML elements of this barplot layer
         this.headerElement = null;
@@ -414,11 +417,11 @@ define([
         dfltLenInput.setAttribute("type", "number");
         dfltLenInput.setAttribute("min", BarplotLayer.MIN_LENGTH);
         dfltLenInput.classList.add("empress-input");
-        dfltLenInput.value = this.defaultLength;
+        dfltLenInput.value = this.defaultLengthFM;
         dfltLenInput.id = "barplot-layer-" + this.uniqueNum + "-dfltlen-input";
         dfltLenLbl.setAttribute("for", dfltLenInput.id);
         $(dfltLenInput).change(function () {
-            scope.defaultLength = util.parseAndValidateNum(
+            scope.defaultLengthFM = util.parseAndValidateNum(
                 dfltLenInput,
                 BarplotLayer.MIN_LENGTH
             );
@@ -594,21 +597,85 @@ define([
         reverseColormapCheckbox.classList.add("empress-input");
         reverseColormapLbl.setAttribute("for", reverseColormapCheckbox.id);
 
+        // Add a row for making the bars of variable length
+        var scaleByNumSamplesP = this.smDiv.appendChild(
+            document.createElement("p")
+        );
+        var scaleByNumSamplesLbl = scaleByNumSamplesP.appendChild(
+            document.createElement("label")
+        );
+        scaleByNumSamplesLbl.innerText = "Scale length by number of samples containing a tip?";
+        var scaleByNumSamplesCheckbox = scaleByNumSamplesP.appendChild(
+            document.createElement("input")
+        );
+        scaleByNumSamplesCheckbox.id =
+            "barplot-layer-" + this.uniqueNum + "-smcolor-scalelennumsamps-chk";
+        scaleByNumSamplesCheckbox.setAttribute("type", "checkbox");
+        scaleByNumSamplesCheckbox.classList.add("empress-input");
+        scaleByNumSamplesLbl.setAttribute("for", scaleByNumSamplesCheckbox.id);
+
         var lenP = this.smDiv.appendChild(document.createElement("p"));
         var lenLbl = lenP.appendChild(document.createElement("label"));
-        lenLbl.innerText = "Length";
+        lenLbl.innerText = "Default length";
         var lenInput = lenP.appendChild(document.createElement("input"));
         lenInput.setAttribute("type", "number");
         lenInput.setAttribute("min", BarplotLayer.MIN_LENGTH);
         lenInput.classList.add("empress-input");
-        lenInput.value = this.defaultLength;
+        lenInput.value = this.defaultLengthSM;
         lenInput.id = "barplot-layer-" + this.uniqueNum + "-smlength-input";
         lenLbl.setAttribute("for", lenInput.id);
+
+        var lenDetailsDiv = this.smDiv.appendChild(
+            document.createElement("div")
+        );
+        lenDetailsDiv.classList.add("indented");
+        lenDetailsDiv.classList.add("hidden");
+        // Add min len stuff
+        var minLenP = document.createElement("p");
+        var minLenLbl = minLenP.appendChild(document.createElement("label"));
+        minLenLbl.innerText = "Minimum length";
+        var minLenInput = document.createElement("input");
+        minLenInput.setAttribute("type", "number");
+        minLenInput.setAttribute("min", BarplotLayer.MIN_LENGTH);
+        minLenInput.classList.add("empress-input");
+        minLenInput.value = BarplotLayer.DEFAULT_MIN_LENGTH;
+        $(minLenInput).change(function () {
+            scope.scaleLengthByNumSamplesSMMin = util.parseAndValidateNum(
+                minLenInput,
+                BarplotLayer.MIN_LENGTH
+            );
+        });
+        minLenP.appendChild(minLenInput);
+        minLenInput.id = "barplot-layer-" + this.uniqueNum + "-fm-minlen-input";
+        minLenLbl.setAttribute("for", minLenInput.id);
+
+        // Add max len stuff
+        var maxLenP = document.createElement("p");
+        var maxLenLbl = maxLenP.appendChild(document.createElement("label"));
+        maxLenLbl.innerText = "Maximum length";
+        var maxLenInput = document.createElement("input");
+        maxLenInput.setAttribute("type", "number");
+        maxLenInput.setAttribute("min", BarplotLayer.MIN_LENGTH);
+        maxLenInput.classList.add("empress-input");
+        maxLenInput.value = BarplotLayer.DEFAULT_MAX_LENGTH;
+        $(maxLenInput).change(function () {
+            scope.scaleLengthByNumSamplesSMMax = util.parseAndValidateNum(
+                maxLenInput,
+                BarplotLayer.MIN_LENGTH
+            );
+        });
+        maxLenP.appendChild(maxLenInput);
+        maxLenInput.id = "barplot-layer-" + this.uniqueNum + "-fm-maxlen-input";
+        maxLenLbl.setAttribute("for", maxLenInput.id);
+
+        lenDetailsDiv.appendChild(minLenP);
+        lenDetailsDiv.appendChild(maxLenP);
 
         // TODO initialize defaults more sanely
         this.colorBySMField = chgFieldSMFieldSelector.value;
         this.colorBySMColorMap = colormapSelector.value;
         this.colorBySMColorReverse = reverseColormapCheckbox.checked;
+        this.scaleLengthByNumSamplesSM = scaleByNumSamplesCheckbox.checked;
         $(chgFieldSMFieldSelector).change(function () {
             scope.colorBySMField = chgFieldSMFieldSelector.value;
         });
@@ -618,8 +685,19 @@ define([
         $(reverseColormapCheckbox).change(function () {
             scope.colorBySMColorReverse = reverseColormapCheckbox.checked;
         });
+        $(scaleByNumSamplesCheckbox).change(function () {
+            if (scaleByNumSamplesCheckbox.checked) {
+                lenP.classList.add("hidden");
+                lenDetailsDiv.classList.remove("hidden");
+                scope.scaleLengthByNumSamplesSM = true;
+            } else {
+                lenP.classList.remove("hidden");
+                lenDetailsDiv.classList.add("hidden");
+                scope.scaleLengthByNumSamplesSM = false;
+            }
+        });
         $(lenInput).change(function () {
-            scope.lengthSM = util.parseAndValidateNum(
+            scope.defaultLengthSM = util.parseAndValidateNum(
                 lenInput,
                 BarplotLayer.MIN_LENGTH
             );
@@ -820,7 +898,7 @@ define([
     /**
      * @type {Number}
      * The default length used for the "Minimum length" input for length
-     * scaling in feature metadata barplots.
+     * scaling in barplots.
      * @public
      */
     BarplotLayer.DEFAULT_MIN_LENGTH = 1;
@@ -828,7 +906,7 @@ define([
     /**
      * @type {Number}
      * The default length used for the "Maximum length" input for length
-     * scaling in feature metadata barplots.
+     * scaling in barplots.
      * @public
      */
     BarplotLayer.DEFAULT_MAX_LENGTH = 100;
