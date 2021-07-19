@@ -204,6 +204,11 @@ class TestCore(unittest.TestCase):
         ):
             Empress(self.tree, feature_metadata=bad_fm)
 
+    def test_init_tree_plot_shear_without_metadata(self):
+        with self.assertRaisesRegex(ValueError,
+                                    "Feature metadata must be provided"):
+            Empress(self.tree, shear_to_feature_metadata=True)
+
     def test_init_only_one_of_table_and_sm_passed(self):
         exp_errmsg = (
             "Both the table and sample metadata should be specified or None. "
@@ -374,9 +379,11 @@ class TestCore(unittest.TestCase):
         # we test key by key so we can do "general" checks on the emperor
         # values, this helps with tests not breaking if any character changes
         # in # Emperor
+        dict_a_cp = copy.deepcopy(DICT_A)
+        dict_a_cp["is_empire_plot"] = True
         for key, value in obs.items():
             if not key.startswith('emperor_'):
-                self.assertEqual(obs[key], DICT_A[key])
+                self.assertEqual(obs[key], dict_a_cp[key])
 
         exp = "<div id='emperor-in-empire'"
         self.assertTrue(obs['emperor_div'].startswith(exp))
@@ -731,6 +738,7 @@ DICT_A = {
     ],
     "lengths": [-1, 1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 3.0, 2.0, 1.0],
     "is_community_plot": True,
+    "is_empire_plot": False,
     "s_ids": ["Sample1", "Sample2", "Sample3", "Sample4"],
     "f_ids": [1, 4, 2, 7],
     "s_ids_to_indices": {
