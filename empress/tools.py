@@ -374,6 +374,9 @@ def shifting(bitlist, size=51):
     if not all(x in [0, 1] for x in bitlist):
         raise ValueError('Your list has values other than 0-1s')
 
+    # Convert all the bits to ints -- if they are np.uint8, etc. instead and
+    # we don't convert them, then this can cause problems: see
+    # https://github.com/biocore/empress/issues/562
     bitlist = [int(x) for x in bitlist]
 
     values = [iter(bitlist)] * size
