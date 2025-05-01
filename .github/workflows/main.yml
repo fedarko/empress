@@ -66,6 +66,9 @@ jobs:
         run: |
           conda run -n qiime2-dev pip uninstall emperor --yes
           conda run -n qiime2-dev pip install -e .[all] --verbose
+          # to prevent the "linear-tree" tests from failing, require an iow vsn
+          # of at least 1.0.8. see https://github.com/biocore/empress/pull/555.
+          conda run -n qiime2-dev pip install "iow >= 1.0.8"
           conda run -n qiime2-dev qiime dev refresh-cache
 
       - name: Run tests
