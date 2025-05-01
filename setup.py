@@ -38,11 +38,12 @@ classifiers = [s.strip() for s in classes.split('\n') if s]
 with open('README.md') as f:
     long_description = f.read()
 
-# NOTE: Pinning iow due to issue described in
-# https://github.com/biocore/improved-octo-waddle/pull/48 and
-# https://github.com/biocore/empress/pull/555
+# NOTE: As described in https://github.com/biocore/empress/pull/555, iow needs
+# to be at least 0.1.3 for ordinary use of Empress. For testing, the "linear"
+# trees we check will cause versions of iow > 0.1.3 and < 1.0.8 to crash --
+# however, this should not impact ordinary use of Empress.
 base = ["numpy", "scipy", "pandas", "click",
-        "jinja2", "scikit-bio", "biom-format", "iow==0.1.3",
+        "jinja2", "scikit-bio", "biom-format", "iow>=0.1.3",
         "emperor>=1.0.2"]
 test = ["flake8", "pytest", "pytest-cov"]
 all_deps = base + test
