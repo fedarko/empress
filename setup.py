@@ -14,6 +14,8 @@ __maintainer__ = "Empress development team"
 __email__ = "kcantrel@ucsd.edu"
 
 # based on the text found in github.com/qiime/pynast
+# NOTE: these supported python versions (3.9 through 3.12) match iow 1.0.8;
+# as of writing, it does not yet support python 3.13.
 classes = """
     Development Status :: 5 - Production/Stable
     License :: OSI Approved :: BSD License
@@ -23,10 +25,10 @@ classes = """
     Topic :: Software Development :: User Interfaces
     Programming Language :: Python
     Programming Language :: Python :: 3 :: Only
-    Programming Language :: Python :: 3.6
-    Programming Language :: Python :: 3.7
-    Programming Language :: Python :: 3.8
     Programming Language :: Python :: 3.9
+    Programming Language :: Python :: 3.10
+    Programming Language :: Python :: 3.11
+    Programming Language :: Python :: 3.12
     Programming Language :: Python :: Implementation :: CPython
     Operating System :: OS Independent
     Operating System :: POSIX
