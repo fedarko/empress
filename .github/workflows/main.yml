@@ -50,17 +50,17 @@ jobs:
         run: |
           conda run -n base make stylecheck
 
-      - name: Set up conda
-        uses: s-weigand/setup-conda@v1
-        with:
-          update-conda: true
-          python-version: 3.6
-          conda-channels: anaconda, conda-forge
-
-      - name: Create QIIME 2 conda environment
+      - name: Download QIIME 2 conda environment YAML
         run: |
           wget -O q2-env.yml https://raw.githubusercontent.com/qiime2/distributions/dev/2024.10/amplicon/released/qiime2-amplicon-ubuntu-latest-conda.yml
-          conda env create -n qiime2-dev --file q2-env.yml
+
+      # https://github.com/conda-incubator/setup-miniconda#example-3-other-options
+      # (from Qurro's qiime2.yml workflow)
+      - name: Install this QIIME 2 version
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: qiime2-dev
+          environment-file: q2-env.yml
 
       - name: Install EMPress
         run: |
