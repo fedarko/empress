@@ -35,7 +35,7 @@ jobs:
         uses: actions/setup-node@v4
 
       - name: Install Node.js modules
-        run: npm install -g qunit-puppeteer jshint prettier@2.0.5
+        run: npm install -g node-qunit-puppeteer jshint prettier@2.0.5
 
       - name: Install flake8
         run: conda run -n base pip install flake8
