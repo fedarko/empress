@@ -32,13 +32,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v1
-        with:
-          # Can use a matrix of Node.js versions in the future if desired;
-          # however, since Node.js should only be used when developing
-          # EMPress, it's not an urgent priority (and should likely be done
-          # separately from the Python CI stuff to save time)
-          node-version: 14
+        uses: actions/setup-node@v4
 
       - name: Install Node.js modules
         run: npm install -g qunit-puppeteer jshint prettier@2.0.5
