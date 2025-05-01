@@ -44,6 +44,12 @@ jobs:
       - name: Install Node.js modules
         run: npm install -g node-qunit-puppeteer jshint prettier@2.0.5
 
+      - name: Set up chrome-sandbox permissions for Puppeteer
+        run: |
+          # from https://github.com/Chia-Network/chia-blockchain/issues/4721#issuecomment-841754056
+          sudo chown root:root $CHROME_DEVEL_SANDBOX
+          sudo chmod 4755 $CHROME_DEVEL_SANDBOX
+
       - name: Install flake8
         run: conda run -n base pip install flake8
 
