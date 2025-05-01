@@ -17,7 +17,7 @@ CSSLOCS = empress/support_files/css/*.css
 test: pytest jstest
 
 pytest:
-	nosetests tests/python
+	python3 -B -m pytest tests/python --cov empress
 
 jstest:
 	@# Note: this assumes you're running this on a Linux/macOS system

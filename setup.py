@@ -44,7 +44,7 @@ with open('README.md') as f:
 base = ["numpy", "scipy", "pandas", "click",
         "jinja2", "scikit-bio", "biom-format", "iow==0.1.3",
         "emperor>=1.0.2"]
-test = ["flake8", "nose"]
+test = ["flake8", "pytest", "pytest-cov"]
 all_deps = base + test
 
 setup(
