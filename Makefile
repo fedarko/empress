@@ -23,7 +23,7 @@ jstest:
 	@# Note: this assumes you're running this on a Linux/macOS system
 	@# Also: previously, we used "qunit-puppeteer", but that stopped
 	@# working at some point. "node-qunit-puppeteer" is maintained and works
-	node-qunit-puppeteer file://$(shell pwd)/tests/index.html
+	node-qunit-puppeteer tests/index.html
 
 # Lints and checks code style
 stylecheck:
