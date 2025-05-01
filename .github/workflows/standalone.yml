@@ -54,7 +54,7 @@ jobs:
 
       # Pinning numpy < 2 per https://github.com/biocore/improved-octo-waddle/issues/59
       - name: Install Cython & NumPy
-        run: pip install cython "numpy >= 1.12.0,<2"
+        run: pip install cython "numpy >= 1.12.0"
 
       - name: Install EMPress
         run: pip install -e .[all]
